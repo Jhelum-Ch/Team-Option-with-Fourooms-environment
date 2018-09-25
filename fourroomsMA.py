@@ -98,15 +98,9 @@ wwwwwwwwwwwww
         self.initial_prior = 1./len(self.states_list)*np.ones(len(self.states_list)) # it is a vector 
 
 
-    def broadcast(self, agent, Q0, Q1): #Q is a critic class, observation is a dictionary
-        #broadcasts = np.zeros(self.numAgents)
-        #agent_option_pair = zip(self.agents, self.options)
+    def broadcast(self, agent, Q0, Q1): 
+        #An agent broadcasts if the agent is at any goal or the intra-option value for no broadcast (Q0) is less than that with broadcast (Q1)
         
-        #for i, (agent,option) in enumerate(agent_option_pair):
-            
-
-            #option.broadcast = float((agent.state in self.goals) or (Q1 > Q0))
-            #broadcasts[i] = option.broadcast
         return float((agent.state in self.goals) or (Q0 < Q1))
 
     def belief(self,y): #state is a tuple, y is a list of states
