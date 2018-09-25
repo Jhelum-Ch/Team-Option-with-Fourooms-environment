@@ -332,8 +332,8 @@ if __name__ == '__main__':
 
 
 	            for step in range(args.nsteps):
-	                observations, reward, done, _ = env.step(actions,broadcasts) #observations is a list of tuples
-	                observation_states = [x[0] for x in observations]
+	                observations, reward, done, _ = env.step(actions,broadcasts) #observations is a list of tuples of (state, action) of each agent
+	                observation_states = [x[0] for x in observations] #list of states of each agent in the list observations
 	               
 	                
 	                sample_states = env.sample_from_belief(self,observation_states,broadcasts)
