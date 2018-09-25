@@ -245,8 +245,6 @@ class FixedActionPolicies:
 
 #___________________
 
-#We assume that number of options (noptions) and number of actions (nactions) available to each agent is the same
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
