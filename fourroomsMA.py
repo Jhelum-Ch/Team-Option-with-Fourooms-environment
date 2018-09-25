@@ -11,7 +11,7 @@ from gym.envs.registration import register
 #         #  self.b = None
 #         self.state = None
 
-# action of the agent
+#option of the agent: has three components, a physical action, a termination and a broadcast action
 class Option(object):
     def __init__(self):
         # physical action
