@@ -99,17 +99,20 @@ wwwwwwwwwwwww
 
 
     def broadcast(self, agent, Q0, Q1): 
-        #An agent broadcasts if the agent is at any goal or the intra-option value for no broadcast (Q0) is less than that with broadcast (Q1)
+        """An agent broadcasts if the agent is at any goal or the intra-option value for 
+        no broadcast (Q0) is less than that with broadcast (Q1)"""
         
         return float((agent.state in self.goals) or (Q0 < Q1))
 
-    def belief(self,y): #state is a tuple, y is a list of states
+
+    #the common belief on the states of all agents based on common observation y
+    def belief(self,y): 
         prior = np.zeros(len(self.states_list))
         posterior = np.zeros(len(self.states_list))
 
         broadcasts = [agent.actions.broadcast for agent in self.agents]
         observations_list = self.get_observation(broadcasts)[0]
-        #self.observationValues = tuple([x[0] for x in list(observation.values())])
+        
         self.observationValues = [x[0] for x in observations_list]
         goals_list = list(itertools.product(self.goals, repeat = self.numAgents))
 
@@ -134,15 +137,9 @@ wwwwwwwwwwwww
 
 
 
-    #for every agent
+    #for every agent find the list of cells that are empty
     def empty_around(self, own_cell, agent, y, broadcasts): 
-        #agentNames = []
-        # for i, agent in enumerate(self.agents):
-        #     agent.name = 'agent %d' % i
-        #     agentNames.append(agent.name)
         availAgent = []
-        #nextcellAgent = {}
-
         sample_state_from_belief = self.sample_from_belief(y,broadcasts)
         sample_belief_other_agents = np.delete(sample_state_from_belief,int(agent.name.split()[1]))
         
@@ -152,18 +149,19 @@ wwwwwwwwwwwww
                 availAgent.append(nextcellAgent)
         return availAgent  
 
-    def reset(self): #reset the world with multiple agents
+
+    #reset the world with multiple agents
+    def reset(self):
         initialStates= self.rng.choice(self.init_states,numAgents,replace=False) #initial states of agents without collision
-        #states = dict(zip(self.agentNames, statesList))
         state = tuple(np.zeros(self.numAgents))
         self.currentcell = {agent:() for agent in self.agents}
         for i, agent in enumerate(self.agents):
-            #agent.name = 'agent %d' % i
             agent.state = initialStates[i]
             state[i] = agent.state
             self.currentcell[agent.name] = self.tocell[agent.state] #current cell coordinates of each agent
-        return state #returns the cell number of each agent
+        return state #returns the tuple containing the cell number of each agent
 
+    
     #update state of the world
     def step(self, actions, broadcasts): #actions is a list, broadcasts is a list
         """
@@ -175,13 +173,9 @@ wwwwwwwwwwwww
         same cell.
         We consider a case in which rewards are zero on all state transitions.
         """
-        #observation = {agentName:() for agentName in self.agentNames}
-        #state = {}
-
+       
         nextcell = {}
-        #y = {agentName:() for agentName in self.agentNames}
         
-
         y_list, goalsExplored, states = self.get_observation(broadcasts) 
         done = goalsExplored == self.goals
 
@@ -199,7 +193,9 @@ wwwwwwwwwwwww
         return y_list, float(done), done, None
 
 
-    def get_observation(self, broadcasts): #broadcasts is. list
+
+    #get the list of common observation, y_list, based on the broadcast action of each agent
+    def get_observation(self, broadcasts): 
         goalsExplored = []
         y = self.observation
          for i, agent in enumerate(self.agents):
