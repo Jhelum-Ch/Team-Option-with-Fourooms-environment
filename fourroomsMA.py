@@ -35,16 +35,6 @@ class Agent:
 
 
 
-
-    #broadcat function: agents see last_observation (dictionary) and choose to broadcast based on Q-value of   
-
-    
-
-
-
-#Note: while defining critic (i.e., Q) function, in the argument, option will have a vector form with last term termination 0. or 1.
-       
-
 class FourroomsMA:
     def __init__(self):
         layout = """\
