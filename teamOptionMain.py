@@ -65,7 +65,7 @@ class EgreedyPolicy:
     	return value
 
     def sample(self, Phi):
-    	sample_actions = np.zeros(self.numAgents)
+    	sample_jointAction = np.zeros(self.numAgents)
     	for i in range(self.numAgents):
 			if self.rng.uniform() < self.epsilon:
             	sample_jointAction[i] = int(self.rng.randint(self.weights.shape[1]))
