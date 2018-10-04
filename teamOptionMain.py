@@ -227,9 +227,9 @@ class OneStepTermination:
 
 
 class FixedActionPolicies:
-    def __init__(self, joint_action, nactions):
+    def __init__(self, joint_action, n_actions):
         self.joint_action = joint_action
-        self.probs = np.eye(nactions)[joint_action]
+        self.probs = np.eye(n_actions)[joint_action]
 
     def sample(self, phi):
         return self.action
