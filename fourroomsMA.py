@@ -212,5 +212,5 @@ register(
     id='FourroomsMA-v0',
     entry_point='fourroomsMA:FourroomsMA',
     timestep_limit=20000,
-    reward_threshold=1,
+    reward_threshold=1, # should we modify this?
 )
