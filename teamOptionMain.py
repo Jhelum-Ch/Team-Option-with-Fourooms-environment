@@ -231,10 +231,10 @@ class FixedActionPolicies:
         self.joint_action = joint_action
         self.probs = np.eye(n_actions)[joint_action]
 
-    def sample(self, phi):
-        return self.action
+    def sample(self, Phi):
+        return self.joint_action
 
-    def pmf(self, phi):
+    def pmf(self, Phi):
         return self.probs
 
 
