@@ -191,8 +191,6 @@ class IntraOptionActionQLearning:
 
 
 
-#finish the following four classes
-
 class TerminationGradient:
     def __init__(self, terminations, critic, lr):
         self.terminations = terminations
@@ -205,6 +203,8 @@ class TerminationGradient:
                 self.lr*magnitudes*(self.critic.advantage(Phi, joint_option))
 
 
+
+# Check this
 class IntraOptionGradient:
     def __init__(self, pi_policies, lr):
         self.lr = lr
