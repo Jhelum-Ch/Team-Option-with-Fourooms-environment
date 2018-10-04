@@ -167,7 +167,7 @@ class IntraOptionActionQLearning:
 
         return np.sum(out)
 
-    def start(self, Phi, joint_option, joint_action): #phi, options, actions are all lists
+    def start(self, Phi, joint_option, joint_action): #Phi is a matrix, joint_option and joint_action are lists
         self.last_Phi = Phi
         self.last_jointOption = joint_option
         self.last_jointAction = joint_action
