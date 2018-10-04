@@ -25,7 +25,7 @@ class SoftmaxPolicy:
 	    self.weights = np.zeros((n_features, n_actions)) # we assume that n_features and n_actions for all agents are same
 	    self.temp = temp
 
-	def value(self, Phi, joint_action=[None for _ in range(self.numAgents)]): #Phi is a n_features x numAgents dimensional matrix, actions is a list 
+	def value(self, Phi, joint_action=[None for _ in range(self.numAgents)]): #Phi is a n_features x numAgents dimensional matrix, joint_action is a list 
 	    value = np.zeros(self.numAgents)
 	    for i in range(self.numAgents):
 		    if joint_action[i] is None:
@@ -105,12 +105,12 @@ class IntraOptionQLearning:
         self.terminations = terminations
         self.weights = weights
 
-    def start(self, Phi, joint_option): #Phi is a matrix and options is a list
+    def start(self, Phi, joint_option): #Phi is a matrix and joint_option is a list
         self.last_Phi = Phi
         self.last_jointOption = joint_option 
         self.last_value = self.value(Phi, joint_option)
 
-    def value(self, Phi, joint_option): #Some of options values could be None
+    def value(self, Phi, joint_option): #Some of joint_option values could be None
 	    out = np.zeros(self.numAgents)
 	    for i in range(self.numAgents):
 	        if joint_option[i] is None:
@@ -160,7 +160,7 @@ class IntraOptionActionQLearning:
         self.weights = weights
         self.qbigomega = qbigomega
 
-    def value(self, Phi, joint_option, joint_action): #Phi is a matrix, options and actions are lists
+    def value(self, Phi, joint_option, joint_action): #Phi is a matrix, joint_option and joint_action are lists
     	out = np.zeros(self.numAgents)
     	for i in range(self.numAgents):
     		out[i] = np.sum(self.weights[Phi[:,i], joint_option[i], joint_action[i]], axis=0)
