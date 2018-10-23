@@ -7,21 +7,11 @@ from gym.envs.registration import register
 # class AgentState(object):
 #     def __init__(self):
 #         # super(AgentState, self).__init__()
-#         #  # event to braodcast 
+#         #  # event to broadcast
 #         #  self.b = None
 #         self.state = None
 
 #option of the agent: has three components, a physical action, a termination and a broadcast action
-class Option(object):
-    def __init__(self):
-        # physical action
-        self.action = None
-        #termination 
-        self.termination = None
-        # broadcast action
-        self.broadcast = 0
-
-
 
 class Agent:
     def __init__(self):
@@ -57,7 +47,7 @@ wwwwwwwwwwwww
         # From any state the agent can perform one of four actions, up, down, left or right
         agent_action_space = spaces.Discrete(4) #check if this is a list
         self.action_space = list(itertools.product(self.agent_action_space, repeat = self.numAgents))
-        
+
         self.agents = [Agent() for _ in range(numAgents)]
         self.options = [Option() for _ in range(numAgents)]
         #self.agents = []
@@ -86,50 +76,50 @@ wwwwwwwwwwwww
                     self.tocellnum[(i,j)] = self.cellnum
                     self.cellnum += 1
         self.tocell = {v:k for k,v in self.tocellnum.items()} #coordinate of a cell corresponding to the number of the cell
-        
+
         self.cell_list = [value for value in list(self.tocellnum.values())]
 
         self.states_list = list(itertools.product(self.cell_list, repeat = self.numAgents)) #numbers state of word in tuples
-        
+
 
         self.goals = [50,62,71,98,103]. #fixed goals
         self.init_states = list(range(self.observation_space.n))
         self.init_states.remove(self.goals)
-        self.initial_prior = 1./len(self.states_list)*np.ones(len(self.states_list)) # it is a vector 
+        self.initial_prior = 1./len(self.states_list)*np.ones(len(self.states_list)) # it is a vector
 
 
-    def broadcast(self, agent, Q0, Q1): 
-        """An agent broadcasts if the agent is at any goal or the intra-option value for 
+    def broadcast(self, agent, Q0, Q1):
+        """An agent broadcasts if the agent is at any goal or the intra-option value for
         no broadcast (Q0) is less than that with broadcast (Q1)"""
-        
+
         return float((agent.state in self.goals) or (Q0 < Q1))
 
 
     #the common belief on the states of all agents based on common observation y
-    def belief(self,y): 
+    def belief(self,y):
         prior = np.zeros(len(self.states_list))
         posterior = np.zeros(len(self.states_list))
 
         broadcasts = [agent.actions.broadcast for agent in self.agents]
         observations_list = self.get_observation(broadcasts)[0]
-        
+
         self.observationValues = [x[0] for x in observations_list]
         goals_list = list(itertools.product(self.goals, repeat = self.numAgents))
 
         sumtotal = 0.
         for i in range(len(self.states_list)):
             sumtotal += float(y==self.observationValues[i]*prior[i])*prior[i]
-        
+
         for i, s in enumerate(self.states_list):
 
             prior = self.initial_prior
 
             if y in goals_list:
                 posterior[self.states_list.index(list(s))] = 1.
-            else: 
+            else:
                 posterior[self.states_list.index(list(s))] = \
                 (float(y==self.observationValues)*prior[self.states_list.index(list(s))])/sumtotal
-        
+
         return posterior
 
     def sample_from_belief(self,y,broadcasts): #returns array
@@ -138,16 +128,16 @@ wwwwwwwwwwwww
 
 
     #for every agent find the list of cells that are empty
-    def empty_around(self, own_cell, agent, y, broadcasts): 
+    def empty_around(self, own_cell, agent, y, broadcasts):
         availAgent = []
         sample_state_from_belief = self.sample_from_belief(y,broadcasts)
         sample_belief_other_agents = np.delete(sample_state_from_belief,int(agent.name.split()[1]))
-        
+
         for agent.actions.action in range(self.action_space.n):
             nextcellAgent = tuple(own_cell + self.directions[agent.actions.action])
             if not self.occupancy[nextcellAgent] and nextcellAgent not in sample_belief_other_agents:
                 availAgent.append(nextcellAgent)
-        return availAgent  
+        return availAgent
 
 
     #reset the world with multiple agents
@@ -161,7 +151,7 @@ wwwwwwwwwwwww
             self.currentcell[agent.name] = self.tocell[agent.state] #current cell coordinates of each agent
         return state #returns the tuple containing the cell number of each agent
 
-    
+
     #update state of the world
     def step(self, actions, broadcasts): #actions is a list, broadcasts is a list
         """
@@ -173,10 +163,10 @@ wwwwwwwwwwwww
         same cell.
         We consider a case in which rewards are zero on all state transitions.
         """
-       
+
         nextcell = {}
-        
-        y_list, goalsExplored, states = self.get_observation(broadcasts) 
+
+        y_list, goalsExplored, states = self.get_observation(broadcasts)
         done = goalsExplored == self.goals
 
         if not done:
@@ -189,13 +179,13 @@ wwwwwwwwwwwww
                         self.currentcell[agent.name] = empty_cells[self.rng.randint(len(empty_cells))]
                 agent.state = self.tostate[self.currentcell[agent.name]]
                 self.states[agent.name] = agent.state
- 
+
         return y_list, float(done), done, None
 
 
 
     #get the list of common observation, y_list, based on the broadcast action of each agent
-    def get_observation(self, broadcasts): 
+    def get_observation(self, broadcasts):
         goalsExplored = []
         y = self.observation
          for i, agent in enumerate(self.agents):

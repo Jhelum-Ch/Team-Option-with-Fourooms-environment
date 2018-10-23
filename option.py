@@ -6,10 +6,11 @@ import numpy as np
 class Option(object):
     def __init__(self):
         # initiation set
-        # self.initiation_set = None
+        self.initiation = None
         # action-policy pi
-        self.action = None
+        self.policy = None
         # termination function beta
         self.termination = None
-        # broadcast action
+        # broadcast action (0: does not broadcast. 1: broadcasts.)
         self.broadcast = 0
+
