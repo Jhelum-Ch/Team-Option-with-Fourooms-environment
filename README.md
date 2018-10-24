@@ -51,4 +51,11 @@ _1 = broadcast_.
 
 6. Do necessary belief, Q-values and policy updates.
 
+## Design choices
+
+1. An agent can at most be penalized for a single collision per step.
+2. All collisions are determined based on the ground truth. All action selections are based on the believed state.
+2. The belief was removed from the environment class, since it is a property of the learning agent, not the environment.
+3. The `step(actions)` and the `get_observation(broadcasts)` functions were separated in order to allow for updating the
+belief immediately after receiving observation y_t and before sampling the new joint-state s_(t+1), which in turn is used to sample the actions.
 
