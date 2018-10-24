@@ -93,7 +93,7 @@ wwwwwwwwwwwww
 
         self.goals = [50, 62, 71, 98, 103]  # fixed goals
         self.goals.sort()                   # important if not already sorted in line above
-        self.discoveredGoals = []
+        self.discovered_goals = []
         self.init_states = self.cell_list.copy()   # initial agent states
         for g in self.goals:
             self.init_states.remove(g)
@@ -139,7 +139,7 @@ wwwwwwwwwwwww
 
         self.currstate = initial_state
 
-        self.discoveredGoals = []
+        self.discovered_goals = []
         return initial_state
 
 
@@ -163,7 +163,7 @@ wwwwwwwwwwwww
         # Process movement based on real states (not belief)
 
         # If all goals were discovered, end episode
-        done = self.discoveredGoals == self.goals
+        done = self.discovered_goals == self.goals
 
         rewards = [0] * self.n_agents
 
@@ -216,7 +216,7 @@ wwwwwwwwwwwww
                 else:
                     s = nextcells[i]                        # movement is valid
                     self.agents[i].state = s
-                    if s in self.goals and s not in self.discoveredGoals:
+                    if s in self.goals and s not in self.discovered_goals:
                         rewards[i] += self.goal_reward
 
             self.currstate = tuple(nextcells)
@@ -236,10 +236,10 @@ wwwwwwwwwwwww
                 y_list.append(None)                      # y_i = None, otherwise
 
         for a in self.agents:
-            if a.state in self.goals and a.state not in self.discoveredGoals:
-                self.discoveredGoals.append(a.state)      # track discovered goals
+            if a.state in self.goals and a.state not in self.discovered_goals:
+                self.discovered_goals.append(a.state)      # track discovered goals
 
-        self.discoveredGoals.sort()
+        self.discovered_goals.sort()
 
         return y_list
 
