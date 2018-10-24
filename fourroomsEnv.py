@@ -112,50 +112,6 @@ wwwwwwwwwwwww
         # print(grid)
 
 
-    # Should be implemented in algorithm, as it requires Q values
-    # def broadcast(self, agent, Q0, Q1):
-    #     """An agent broadcasts if the agent is at any goal or the intra-option value for
-    #     no broadcast (Q0) is less than that with broadcast (Q1)"""
-    #
-    #     return float((agent.state in self.goals) or (Q0 < Q1))
-
-
-    # TODO: Ensure belief is doing what it is supposed to. Make it a class. Also, reflect if it should be in the environment or in the algo
-
-    def belief(self, y):
-        """
-        The common belief on the states of all agents based on common observation y
-        """
-
-        prior = np.zeros(len(self.states_list))
-        posterior = np.zeros(len(self.states_list))
-
-        broadcasts = [agent.actions.broadcast for agent in self.agents]
-        observations_list = self.get_observation(broadcasts)[0]
-
-        self.observationValues = [x[0] for x in observations_list]
-        goals_list = list(itertools.product(self.goals, repeat=self.n_agents))
-
-        sumtotal = 0.
-        for i in range(len(self.states_list)):
-            sumtotal += float(y == self.observationValues[i] * prior[i]) * prior[i]
-
-        for i, s in enumerate(self.states_list):
-
-            prior = self.initial_prior
-
-            if y in goals_list:
-                posterior[self.states_list.index(list(s))] = 1.
-            else:
-                posterior[self.states_list.index(list(s))] = \
-                    (float(y == self.observationValues) * prior[self.states_list.index(list(s))]) / sumtotal
-
-        return posterior
-
-    def sample_from_belief(self, y, broadcasts):  # returns array
-        return self.rng.choice(self.cellnum, self.n_agents, p=self.belief(y, broadcasts))
-
-
     # returns empty cells around a given cell (taken as coordinates) (unused in code)
     def empty_adjacent(self, cell):
         empty = []
@@ -174,7 +130,6 @@ wwwwwwwwwwwww
         return adj
 
 
-
     # reset the world with multiple agents
     def reset(self):
         # Sample initial joint state (s_0,...,s_n) without collision
@@ -189,7 +144,7 @@ wwwwwwwwwwwww
 
 
     # update state of the world
-    def step(self, actions, broadcasts):  # actions is a list, broadcasts is a list
+    def step(self, actions):  # actions is a list, broadcasts is a list
         """
         Each agent can perform one of four actions,
         up, down, left or right, which have a stochastic effect. With probability 2/3, the actions
@@ -205,12 +160,7 @@ wwwwwwwwwwwww
         assert len(actions) == len(self.agents), "Number of actions (" + str(
             len(actions)) + ") does not match number of agents (" + str(self.n_agents) + ")"
 
-        assert len(actions) == len(self.agents), "Number of actions (" + str(
-            len(broadcasts)) + ") does not match number of agents (" + str(self.n_agents) + ")"
-
         # Process movement based on real states (not belief)
-
-        y_list = self.get_observation(broadcasts)
 
         # If all goals were discovered, end episode
         done = self.discoveredGoals == self.goals
@@ -221,6 +171,8 @@ wwwwwwwwwwwww
 
             nextcells = [None] * self.n_agents
             rand_nums = self.rng.uniform(size=self.n_agents)
+
+            print(rand_nums)
 
 
             for i in range(self.n_agents):
@@ -234,7 +186,7 @@ wwwwwwwwwwwww
                         nextcells[i] = self.tocellnum[tuple(currcell+direction)]
                     else:
                         nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
-                        rewards[i] += self.collision_penalty
+                        # rewards[i] += self.collision_penalty
 
                 else:   # pick random action, except one initially intended
                     adj_cells = self.adjacent_to(currcell)      # returns list of tuples
@@ -247,28 +199,29 @@ wwwwwwwwwwwww
                         nextcells[i] = self.tocellnum[new_cell]
                     else:
                         nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
-                        rewards[i] += self.collision_penalty
+                        # rewards[i] += self.collision_penalty
 
             # check for inter-agent collisions:
             collisions = [c for c, count in Counter(nextcells).items() if count > 1]
-            for i in range(len(nextcells)):
-                if nextcells[i] in collisions:
-                    if nextcells[i] != self.agents[i].state:
-                        rewards[i] += self.collision_penalty    # agent only penalised if it didn't already hit a wall
+            while(len(collisions) != 0):        # While loop needed to handle edge cases
+                for i in range(len(nextcells)):
+                    if nextcells[i] in collisions:
+                        nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
 
-                    nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
-                else:
-                    self.agents[i].state = nextcells[i]     # movement is valid
+                collisions = [c for c, count in Counter(nextcells).items() if count > 1]
 
             for i in range(self.n_agents):
-                s = self.agents[i].state
-                if s in self.goals and s not in self.discoveredGoals:
-                    rewards[i] += self.goal_reward
-
+                if nextcells[i] == self.agents[i].state:    # A collision happened for this agent
+                    rewards[i] += self.collision_penalty
+                else:
+                    s = nextcells[i]                        # movement is valid
+                    self.agents[i].state = s
+                    if s in self.goals and s not in self.discoveredGoals:
+                        rewards[i] += self.goal_reward
 
             self.currstate = tuple(nextcells)
 
-        return y_list, rewards, done, None
+        return rewards, done, None      # Observations are not returned; they need to be queried with broadcasts
 
 
     # get the list of common observation, y_list, based on the broadcast action of each agent
