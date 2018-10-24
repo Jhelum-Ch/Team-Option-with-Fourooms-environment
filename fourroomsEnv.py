@@ -24,7 +24,7 @@ class FourroomsMA:
         # stay = 4
 
 
-    def __init__(self, n_agents = 3):
+    def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty = -0.01, collision_penalty = -0.01):
         layout = """\
 wwwwwwwwwwwww
 w     w     w
@@ -42,6 +42,9 @@ wwwwwwwwwwwww
 """
 
         self.n_agents = n_agents
+        self.goal_reward = goal_reward
+        self.broadcast_penalty = broadcast_penalty
+        self.collision_penalty = collision_penalty
 
         # create occupancy matrix.
         # 0 : free cell
@@ -89,7 +92,9 @@ wwwwwwwwwwwww
                             if len(s) == len(np.unique(s))]
 
         self.goals = [50, 62, 71, 98, 103]  # fixed goals
-        self.init_states = self.cell_list   # initial agent states
+        self.goals.sort()                   # important if not already sorted in line above
+        self.discoveredGoals = []
+        self.init_states = self.cell_list.copy()   # initial agent states
         for g in self.goals:
             self.init_states.remove(g)
 
@@ -97,6 +102,8 @@ wwwwwwwwwwwww
 
         # Current real joint state of the environment.
         self.currstate = None
+
+        self.reset()
 
         # # visualize grid, where walls = -1 and all cells are numbered
         # grid = self.occupancy*-1
@@ -149,7 +156,7 @@ wwwwwwwwwwwww
         return self.rng.choice(self.cellnum, self.n_agents, p=self.belief(y, broadcasts))
 
 
-    # returns empty cells around a given cell (taken as coordinates)
+    # returns empty cells around a given cell (taken as coordinates) (unused in code)
     def empty_adjacent(self, cell):
         empty = []
         for d in self.directions:
@@ -157,6 +164,14 @@ wwwwwwwwwwwww
                 empty.append(cell+d)
 
         return empty
+
+    # returns all four cells adjacent to a given cell (taken as coordinates)
+    def adjacent_to(self, cell):
+        adj = []
+        for d in self.directions:
+            adj.append(tuple(cell+d))
+
+        return adj
 
 
 
@@ -168,6 +183,8 @@ wwwwwwwwwwwww
             self.agents[i].state = initial_state[i]     # Store state in agents
 
         self.currstate = initial_state
+
+        self.discoveredGoals = []
         return initial_state
 
 
@@ -185,64 +202,93 @@ wwwwwwwwwwwww
         We consider a case in which rewards are zero on all state transitions.
         """
 
+        assert len(actions) == len(self.agents), "Number of actions (" + str(
+            len(actions)) + ") does not match number of agents (" + str(self.n_agents) + ")"
+
+        assert len(actions) == len(self.agents), "Number of actions (" + str(
+            len(broadcasts)) + ") does not match number of agents (" + str(self.n_agents) + ")"
+
         # Process movement based on real states (not belief)
 
-        nextcells = []
-        rand_nums = self.rng.uniform(size=self.n_agents)
+        y_list = self.get_observation(broadcasts)
 
-        for i in range(self.n_agents):
-            currcell = self.tocellcoord(self.agents[i].state)
-            act = actions[i]
-            dir = self.directions[act]
+        # If all goals were discovered, end episode
+        done = self.discoveredGoals == self.goals
 
-            if rand_nums[i] > 1/3:  # pick action as intended
-                if self.occupancy[currcell + dir] == 0:
-                    nextcells[i] = self.tocellnum(currcell + self.directions[act])
+        rewards = [0] * self.n_agents
+
+        if not done:
+
+            nextcells = [None] * self.n_agents
+            rand_nums = self.rng.uniform(size=self.n_agents)
+
+
+            for i in range(self.n_agents):
+
+                currcell = self.tocellcoord[self.agents[i].state]
+                act = actions[i]
+                direction = self.directions[act]
+
+                if rand_nums[i] > 1/3:  # pick action as intended
+                    if self.occupancy[tuple(currcell + direction)] == 0:
+                        nextcells[i] = self.tocellnum[tuple(currcell+direction)]
+                    else:
+                        nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
+                        rewards[i] += self.collision_penalty
+
+                else:   # pick random action, except one initially intended
+                    adj_cells = self.adjacent_to(currcell)      # returns list of tuples
+                    adj_cells.remove(tuple(currcell+direction))
+
+                    index = self.rng.choice(range(len(adj_cells)))
+                    new_cell = adj_cells[i]
+
+                    if self.occupancy[new_cell] == 0:
+                        nextcells[i] = self.tocellnum[new_cell]
+                    else:
+                        nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
+                        rewards[i] += self.collision_penalty
+
+            # check for inter-agent collisions:
+            collisions = [c for c, count in Counter(nextcells).items() if count > 1]
+            for i in range(len(nextcells)):
+                if nextcells[i] in collisions:
+                    if nextcells[i] != self.agents[i].state:
+                        rewards[i] += self.collision_penalty    # agent only penalised if it didn't already hit a wall
+
+                    nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
                 else:
-                    nextcells[i] = self.tocellnum(currcell)
+                    self.agents[i].state = nextcells[i]     # movement is valid
 
-            else:   # pick random action, except one initially intended
-                empty_cells = self.empty_adjacent(currcell)
-                if currcell + dir in empty_cells:
-                    empty_cells.remove(currcell + dir)
-
-                if len(empty_cells) == 0:   # impossible in current layout, but possible in general
-                    nextcells[i] = self.tocellnum(currcell)
-                else:
-                    nextcells[i] = self.tocellnum(self.rng.choice(empty_cells))
-
-        # check for inter-agent collisions:
-        collisions = [c for c, count in Counter(nextcells).iteritems() if count > 1]
-        for i in len(nextcells):
-            if nextcells[i] in collisions:
-                nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
-            else:
-                self.agents[i].state = nextcells[i]     # movement is valid
-
-        self.currstate = tuple(nextcells)
+            for i in range(self.n_agents):
+                s = self.agents[i].state
+                if s in self.goals and s not in self.discoveredGoals:
+                    rewards[i] += self.goal_reward
 
 
-        y_list, goalsExplored, states = self.get_observation(broadcasts)
-        done = goalsExplored == self.goals
+            self.currstate = tuple(nextcells)
 
-        return y_list, float(done), done, None
-
-
-    # TODO: Change observation in order to return the correct thing
+        return y_list, rewards, done, None
 
 
     # get the list of common observation, y_list, based on the broadcast action of each agent
     def get_observation(self, broadcasts):
-        goalsExplored = []
-        y = self.observation
-        for i, agent in enumerate(self.agents):
-            agent.actions.broadcast = broadcasts[i]
-            if agent.actions.broadcast == 1.:
-                y[agent.name] = (agent.state, agent.actions.action)
-                goalsExplored.append(agent.state)
 
-        y_list = list(y.values())
-        return y_list, goalsExplored, states
+        y_list = []      # Joint observation y = (y_0, ..., y_n)
+
+        for i in range(self.n_agents):
+            if broadcasts[i] == 1:
+                y_list.append(self.agents[i].state)      # y_i = s^i_t if agent i broadcasts
+            else:
+                y_list.append(None)                      # y_i = None, otherwise
+
+        for a in self.agents:
+            if a.state in self.goals and a.state not in self.discoveredGoals:
+                self.discoveredGoals.append(a.state)      # track discovered goals
+
+        self.discoveredGoals.sort()
+
+        return y_list
 
 
 register(
