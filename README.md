@@ -39,17 +39,18 @@ For the **Agent class**:
 
 ## Expected workflow
 
-Starting in the state s_t with belief up to date. The transition towards s_(t+1) requires the following steps:
+At time t, start with belief **b_t** (up to date). The transition towards s_(t+1) requires the following steps:
 
-1. For all agents j, sample action a^j according to the internal policy associated with the option `agents[j].option`.
-Store all actions in a _List_ `actions`.
-2. Call `step_rewards, done, _ = step(actions)`.
-3. For all agents, determine if they broadcast based on eq. (18). Store decision in `broadcasts`, where _0 = no broadcast_ and
-_1 = broadcast_.
-4. Assign `env.broadcast_penalty` to agents that decided to broadcast.
-5. Call `y_t = env.get_observation(broadcasts)` and update belief according to eq. (21).
-
-6. Do necessary belief, Q-values and policy updates.
+1. Sample **s_t ~ b_t**
+2. Sample **a_t = [ a_t^j ~ pi^j(s_t) ]**
+3. Compute  **s_t+1 = s_t + a_t** assuming that the environment layout is known and that the transition is deterministic
+4. Call `step_rewards, done, _ = step(actions)`.
+5. For all agents, determine if they broadcast based on eq. (18). Store decision in `broadcasts`, where _0 = no broadcast_ and _1 = broadcast_.
+6. Assign `env.broadcast_penalty` to agents that decided to broadcast.
+7. Call `y_t = env.get_observation(broadcasts)`
+8. Compute data **Samples** based on **y_t**, by filling the gaps from the belief. 
+9. Updtate belief **b_(t+1) <----- commbeliefupdate(b_t, Samples)**
+10. TD evaluation and Policy improvement
 
 ## Design choices
 
