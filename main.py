@@ -65,6 +65,9 @@ state = env.currstate
 
 t = 0
 
+# Most up-to-date information on which options the agents are running
+option_belief = [None]*env.n_agents
+
 
 while t < MAX_STEPS or not done :
 
@@ -81,22 +84,26 @@ while t < MAX_STEPS or not done :
             # TODO: if desired, can only pass option IDs instead of full option.
             env.agents[i].option = options[ start_options[i] ]
 
+        option_belief = start_options.copy()
+
     # 1. Sample s_t ~ b_t
     if t != 0:
         state = belief.sample_single_state()
 
+
     # 2. Sample a_t = [ a_t^j ~ pi^j(s_t) ]
     actions = [a.option.policy.sample_action(state) for a in env.agents]
+
+    # 2.1 Simulate actions a_t based on most up do date information on running options
+    simu_actions = [options[ID].policy.sample_action(state) for ID in option_belief]
+
 
     # 3. Compute s_t+1 = s_t + a_t assuming that the environment layout is known and that the transition is deterministic
     # Handles wall collisions but not agent collisions
     next_state = [None for _ in range(env.n_agents)]
 
-    print(actions)
-    print(state)
-
     for i in range(env.n_agents):
-        next_cell = tuple(env.tocellcoord[state[i]] + env.directions[actions[i]])
+        next_cell = tuple(env.tocellcoord[state[i]] + env.directions[simu_actions[i]])
         if env.occupancy[next_cell] == 0:
             next_state[i] = env.tocellnum[next_cell]
         else:
@@ -118,6 +125,11 @@ while t < MAX_STEPS or not done :
 
     # 7. Get observation based on broadcasts
     y = env.get_observation(broadcasts)
+
+    # 7.1 Update option information
+    for i in range(env.n_agents):
+        if broadcasts[i] == 1:
+            option_belief[i] = env.agents[i].option.ID
 
 
     # Initialize samples to starting state
