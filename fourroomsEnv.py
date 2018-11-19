@@ -167,13 +167,12 @@ wwwwwwwwwwwww
 
         rewards = [0] * self.n_agents
 
+        reward = 0
+
         if not done:
 
             nextcells = [None] * self.n_agents
             rand_nums = self.rng.uniform(size=self.n_agents)
-
-            print(rand_nums)
-
 
             for i in range(self.n_agents):
 
@@ -221,7 +220,9 @@ wwwwwwwwwwwww
 
             self.currstate = tuple(nextcells)
 
-        return rewards, done, None      # Observations are not returned; they need to be queried with broadcasts
+            reward = np.sum(rewards)
+
+        return reward, done, None      # Observations are not returned; they need to be queried with broadcasts
 
 
     # get the list of common observation, y_list, based on the broadcast action of each agent
