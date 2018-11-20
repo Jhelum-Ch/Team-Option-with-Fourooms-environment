@@ -45,6 +45,7 @@ class Belief:
         purpose : samples observation from the current belief distribution
         returns : data matrix of dimenson (number of agents x sample_Count)
         '''
+        # TODO: Ensure samples are composed of discrete atomic states (i.e. Integers, not decimal numbers)
         samples = np.random.multivariate_normal(mean=self.mean_itr, cov=self.cov_itr, size=self.N)
         return samples
 
@@ -53,11 +54,13 @@ class Belief:
         purpose : sample a unique state from the current belief distribution
         returns : joint state tuple
         '''
+
+        # TODO: Ensure samples are composed of discrete atomic states (i.e. Integers, not decimal numbers)
         sample = np.random.multivariate_normal(mean=self.mean_itr, cov=self.cov_itr, size=1)
 
         state_list = []
         for i in range(sample.size):
-            state_list.append(sample[0][i])
+            state_list.append(round(sample[0][i]))      # TODO: Patched temporarily with round()
 
         return tuple(state_list)
 
@@ -65,8 +68,8 @@ class Belief:
         '''
         uses Normal Inverse Wishart for posterior update of the parameters of the prior distribution
         '''
+
         x_bar = np.mean(samples, axis=0)  # sample mean
-        print(x_bar.size)
         sample_cov = np.cov(samples)
 
         # Gibb's sampling
@@ -76,8 +79,8 @@ class Belief:
         for _ in range(self.num_itr):
             # Update mean
             mean_tmp = (self.k0 * self.mu0 + self.N * x_bar) / (self.k0 + self.N)
-            print(mean_tmp)
-            self.mean_itr = np.random.multivariate_normal(mean_tmp, self.cov_itr / k, 1)
+            # print(mean_tmp)
+            self.mean_itr = np.random.multivariate_normal(mean_tmp, self.cov_itr / k)
 
             # Update cov
             sample_demean = samples - self.mean_itr
