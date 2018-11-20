@@ -9,7 +9,7 @@ from fourroomsEnv import FourroomsMA
 from option import Option
 
 env = FourroomsMA()
-belief = Belief(env.n_agents)   # sample_count if different from default (1000)
+belief = Belief(env.n_agents, env.cell_list)   # sample_count if different from default (1000)
 
 R = np.random.RandomState(1337)
 
@@ -27,6 +27,21 @@ class RandomPolicy:
         return self.rng.randint(0, self.n_actions)
 
 
+# TODO: Implement/import proper termination funcitons
+class RandomTermination:
+        # Placeholder intra-option policy
+
+        def __init__(self, n_actions, seed=4567):
+            self.n_actions = n_actions
+            self.rng = np.random.RandomState(seed)
+
+        def sample_action(self, state):
+            n = self.rng.uniform(0,1)
+            if n < 0.1:
+                return 1    # terminate with probability 0.1
+            return 0
+
+
 # TODO: Implement/import the proper algorithm to handle extra-policy Q-learning, broadcast and option selection
 class RandomAlgo:
     # Placeholder random algorithm
@@ -34,12 +49,15 @@ class RandomAlgo:
         self.rng = np.random.RandomState(seed)
 
     def chooseBroadcast(self, state, optionID):
-        return self.rng.randint(0, 1)
+        n = self.rng.uniform(0,1)
+        if n < 0.1:
+            return 1  # broadcast with probability 0.1
+        return 0
 
 
 # This would normally be replaced by the full Option Critic architecture
 # TODO: Initialize with real algorihtm.
-algo =  RandomAlgo()
+algo = RandomAlgo()
 
 n_options = env.n_agents + 1
 
@@ -53,15 +71,17 @@ for o in options:
     # TODO: Initialize with real policies and termination functions.
 
     o.policy = RandomPolicy(n_actions = 4, seed = s*1000)
-    o.termination = RandomPolicy(n_actions = 2, seed = s*201)
+    o.termination = RandomTermination(n_actions = 2, seed = s*201)
     o.ID = opt_id
     s += 1
     opt_id += 1
 
-MAX_STEPS = 1000
+MAX_STEPS = 20
 done = False
 
 state = env.currstate
+
+print("START STATE: ", state)
 
 t = 0
 
@@ -69,7 +89,10 @@ t = 0
 option_belief = [None]*env.n_agents
 
 
-while t < MAX_STEPS or not done :
+while t < MAX_STEPS and not done :
+
+    print("----------------")
+    print("T = ", t)
 
 
     if t == 0:
@@ -109,60 +132,17 @@ while t < MAX_STEPS or not done :
         else:
             next_state[i] = state[i]
 
-    next_state = tuple(next_state)
-
     # 4. Enact actions on reward
     step_reward, done, _ = env.step(actions)
 
-    # 5. For all agents, determine if they broadcast
-    broadcasts = [None]*env.n_agents
+    # 5. Check option termination and assign new options. Also force broadcast on termination
+    broadcasts = [None] * env.n_agents
     for i in range(env.n_agents):
         a = env.agents[i]
-        broadcasts[i] = algo.chooseBroadcast(next_state, a.option.ID)
-
-    # 6. Decrease reward based on number of broadcasting agents
-    step_reward += np.sum(broadcasts)*env.broadcast_penalty
-
-    # 7. Get observation based on broadcasts
-    y = env.get_observation(broadcasts)
-
-    # 7.1 Update option information
-    for i in range(env.n_agents):
-        if broadcasts[i] == 1:
-            option_belief[i] = env.agents[i].option.ID
-
-
-    # Initialize samples to starting state
-    if t == 0:
-        samples = np.zeros((env.n_agents, belief.N))
-        for i in range(env.n_agents):
-            for j in range(env.n_agents):
-                samples[i,j] = env.currstate[i]
-
-    # 8. Compute data Samples based on y, by filling the gaps from the belief.
-    if np.sum(broadcasts) > 0 :
-        # Samples are updated iff there was at least one broadcast
-        samples = belief.sample()
-
-        for i in range(y.size()):
-            if y[i] is not None:
-                # Correct sampled states with broadcasted info
-                for j in range(0, belief.N):
-                    samples[i, j] = y[i]
-
-                # Correct next state info (used below for termination decision)
-                next_state[i] = y[i]
-
-    # 9. Update belief
-    # belief.updateBeliefParameters(samples)
-
-    # TODO: 10. TD evaluation and Policy improvement
-
-    # 11. Check termination and assign new options
-    for a in env.agents:
         if a.option.termination.sample_action(next_state) == 1:
             free_options.append(a.option.ID)
             a.option = None
+            broadcasts[i] = 1   # force broadcast
 
     free_options.sort()
 
@@ -172,6 +152,71 @@ while t < MAX_STEPS or not done :
             free_options.remove(new_opt)
             a.option = options[new_opt]
 
+    # 6. For all agents, determine if they broadcast
+    for i in range(env.n_agents):
+        a = env.agents[i]
+        if broadcasts[i] is None:
+            broadcasts[i] = algo.chooseBroadcast(next_state, a.option.ID)
+
+    # 7. Decrease reward based on number of broadcasting agents
+    step_reward += np.sum(broadcasts)*env.broadcast_penalty
+
+    # 8. Get observation based on broadcasts
+    y = env.get_observation(broadcasts)
+
+    # 8.1 Update option information
+    for i in range(env.n_agents):
+        if broadcasts[i] == 1:
+            option_belief[i] = env.agents[i].option.ID
+
+    # Initialize samples to starting state
+    if t == 0:
+        samples = np.zeros((belief.N, env.n_agents,))
+        for i in range(belief.N):
+            for j in range(env.n_agents):
+                samples[i,j] = env.currstate[j]
+    else:
+        # TODO: Right now, samples are drawn every step. Check (*) below for alternative.
+        samples = belief.sample()
+
+
+    # 9. Compute data Samples based on y, by filling the gaps from the belief.
+    if np.sum(broadcasts) > 0 :
+
+        # TODO: (*) Verify if the two lines below are correct. I believe samples should be drawn every step.
+        # Samples are updated iff there was at least one broadcast
+        # samples = belief.sample()
+
+        for i in range(env.n_agents):
+            if y[i] is not None:
+                # Correct sampled states with broadcasted info
+                for j in range(belief.N):
+                    samples[j, i] = y[i]
+
+                # Correct next state info (used below for termination decision)
+                next_state[i] = y[i]
+
+    # 10. Update belief
+    belief.updateBeliefParameters(samples)
+
+    # TODO: 11. TD evaluation and Policy improvement
 
     # Increment time
     t += 1
+
+    print("Broadcasts: ", broadcasts)
+    print("Observations: ", y)
+    print("Samples:")
+    print(samples)
+    print("Samples mean: ", np.mean(samples, axis=0))
+    print("Samples stdev: ", np.std(samples, axis=0))
+
+    print("Next state: ", next_state)
+    print("REAL state: ", env.currstate)
+
+
+print()
+if done:
+    print("All goals explored.")
+else:
+    print("Maximum number of steps reached. (", MAX_STEPS, ")")
