@@ -45,12 +45,13 @@ At time t, start with belief **b_t** (up to date). The transition towards s_(t+1
 2. Sample **a_t = [ a_t^j ~ pi^j(s_t) ]**
 3. Compute  **s_t+1 = s_t + a_t** assuming that the environment layout is known and that the transition is deterministic
 4. Call `step_reward, done, _ = step(actions)`.
-5. For all agents, determine if they broadcast based on eq. (18). Store decision in `broadcasts`, where _0 = no broadcast_ and _1 = broadcast_.
-6. Decrement the reward by `env.broadcast_penalty` for each broadcasting agent
-7. Call `y_t = env.get_observation(broadcasts)`
-8. Compute data **Samples** based on **y_t**, by filling the gaps from the belief. 
-9. Updtate belief **b_(t+1) <----- commbeliefupdate(b_t, Samples)**
-10. TD evaluation and Policy improvement
+5. Check option termination based on **s_t+1** computed at step 3 and assign new options. Also force broadcast on termination.
+6. For all agents, determine if they broadcast based on eq. (18). Store decision in `broadcasts`, where _0 = no broadcast_ and _1 = broadcast_.
+7. Decrement the reward by `env.broadcast_penalty` for each broadcasting agent
+8. Call `y_t = env.get_observation(broadcasts)`
+9. Compute data **Samples** based on **y_t**, by filling the gaps from the belief. 
+10. Updtate belief **b_(t+1) <----- commbeliefupdate(b_t, Samples)**
+11. TD evaluation and Policy improvement
 
 ## Design choices
 
