@@ -392,8 +392,8 @@ if __name__ == '__main__':
 	            broadcasts = [agent.Option().broadcast for agent in agents]
 
                 # The following two are required to check for broadcast for each agent in every step
-    	        phi0 = np.zeros(n_features)
-    			phi1 = mp.copy(phi0)
+                phi0 = np.zeros(n_features)
+        		phi1 = mp.copy(phi0)
 
             
                 observation_samples = np.zeros((belief.N, args.n_agents,))
