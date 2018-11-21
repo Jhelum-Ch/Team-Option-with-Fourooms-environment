@@ -377,11 +377,11 @@ if __name__ == '__main__':
                 # Check how to sample from Mu-policy distribution without replacement
                 joint_optionIDs = random.sample(available_optionIDs, k = args.n_agents) # All agents sample IDs from pool of available options without replacement
 
-	            #joint_option = [mu_policy.sample(Phi[:,i]) for i in range(joint_optionIDs)]
+                #joint_option = [mu_policy.sample(Phi[:,i]) for i in range(joint_optionIDs)]
                 #joint_action = [pi_policies[joint_option[i]].sample(Phi[:,i]) for i in range(args.n_agents)]
                 joint_action = [policies[joint_optionIDs[i]].sample(phi) for i in range(len(joint_optionIDs))]
-	            option_critic.start(phi, joint_option)
-	            action_critic.start(phi, joint_option, joint_action)
+                option_critic.start(phi, joint_option)
+                action_critic.start(phi, joint_option, joint_action)
 
 
 
@@ -392,8 +392,8 @@ if __name__ == '__main__':
 	            broadcasts = [agent.Option().broadcast for agent in agents]
 
                 # The following two are required to check for broadcast for each agent in every step
-				phi0 = np.zeros(n_features)
-				phi1 = mp.copy(phi0)
+    	        phi0 = np.zeros(n_features)
+    			phi1 = mp.copy(phi0)
 
             
                 observation_samples = np.zeros((belief.N, args.n_agents,))
@@ -420,7 +420,7 @@ if __name__ == '__main__':
                     actual_joint_actions = [a.option.policy.sample_action(joint_state) for a in agents]
 
                     # 4. Get reward from environment based on on actual actions
-	                reward, done, _ = env.step(actual_joint_action) 
+                    reward, done, _ = env.step(actual_joint_action) 
 	               
                    # The following two are required to check for broadcast for each agent in every step
                     reward_with_broadcast = np.copy(reward)
