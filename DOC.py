@@ -4,10 +4,17 @@ import random
 import dill
 import gym
 import numpy as np
-from OptionCritic import *
 
+from optionCritic.gradients import IntraOptionGradient, TerminationGradient
+from optionCritic.policies import SoftmaxPolicy, FixedActionPolicies
+from optionCritic.termination import SigmoidTermination, OneStepTermination
+from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning
+
+from distributed.broadcast import Broadcast
+from distributed.belief import Belief
+
+from option import Option
 from agent import Agent
-from belief import Belief
 from fourroomsEnv import FourroomsMA
 
 
@@ -23,26 +30,6 @@ class Tabular:
 
     def __len__(self):
         return self.n_states
-
-
-class Broadcast:
-    def __init__(self, goals, agent, optionID):
-        self.goals = goals
-        self.agent = agent
-        self.optionID = optionID
-
-    def broadcastBasedOnQ(self, Q0, Q1):    
-        """An agent broadcasts if the agent is at any goal or the intra-option value for 
-        no broadcast (Q0) is less than that with broadcast (Q1)"""
-
-        return (agent.state in self.goals) or (Q0 < Q1)
-
-
-    def randomBroadcast(self, state):
-        n = self.rng.uniform(0,1)
-        if n < 0.1:
-            return 1  # broadcast with probability 0.1
-        return 0
 
 
 #___________________
@@ -69,18 +56,12 @@ if __name__ == '__main__':
 
     rng = np.random.RandomState(1234)
     env = gym.make('FourroomsMA-v0')
-    agents = [Agent() for _ in range(args.n_agents)]
+    agents = [Agent(ID=i) for i in range(args.n_agents)]
 
     fname = '-'.join(['{}_{}'.format(param, val) for param, val in sorted(vars(args).items())])
     fname = 'optioncritic-fourroomsMA-' + fname + '.npy'
 
     possible_next_goals = [68, 69, 70, 71, 72, 78, 79, 80, 81, 82, 88, 89, 90, 91, 92, 93, 99, 100, 101, 102, 103]
-
-
-    print("TESTING")
-    x = SoftmaxPolicy(rng, 5, 5, args.temperature)
-    print(x)
-
 
     history = np.zeros((args.n_runs, args.n_episodes, args.n_agents+1))
     for run in range(args.n_runs):
