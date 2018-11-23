@@ -247,7 +247,7 @@ wwwwwwwwwwwww
 
 register(
     id='FourroomsMA-v0',
-    entry_point='fourroomsMA:FourroomsMA',
+    entry_point='fourroomsEnv:FourroomsMA',
     timestep_limit=20000,
     reward_threshold=1,  # should we modify this?
 )
