@@ -56,10 +56,12 @@ class Belief:
         '''
 
         # TODO: Ensure samples are composed of discrete atomic states (i.e. Integers, not decimal numbers)
+        # TODO: Look for discrete kernel estimator to sample discrete states, which could be more suitable
         sample = np.random.multivariate_normal(mean=self.mean_itr, cov=self.cov_itr, size=1)
 
         state_list = []
         for i in range(sample.size):
+            # TODO: Patched temporarily with round().
             state_list.append(round(sample[0][i]))      # TODO: Patched temporarily with round()
 
         return tuple(state_list)
