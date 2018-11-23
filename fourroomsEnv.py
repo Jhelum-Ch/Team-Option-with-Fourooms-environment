@@ -2,6 +2,7 @@ import numpy as np
 import itertools
 from collections import Counter
 from enum import IntEnum
+import gym
 from gym import core, spaces
 from gym.envs.registration import register
 from agent import Agent
@@ -12,7 +13,7 @@ if sys.version_info[0] < 3:
     print("Warning! Python 2 can lead to unpredictable behaviours. Please use Python 3 instead.")
 
 
-class FourroomsMA:
+class FourroomsMA(gym.Env):
 
     # Defines the atomic actions for the agents
     class Actions(IntEnum):
