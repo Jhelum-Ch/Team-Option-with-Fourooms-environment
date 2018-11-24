@@ -54,7 +54,7 @@ wwwwwwwwwwwww
 
         # Intialize atomic actions, and action spaces both for individual agents and for the joint actions a = (a^0, a^1,..., a^n)
         self.agent_actions = FourroomsMA.Actions
-        self.agent_action_space = spaces.Discrete(len(self.agent_actions))  # Not sure if needed
+        self.action_space = spaces.Discrete(len(self.agent_actions))
         self.joint_actions = list(itertools.product(range(len(self.agent_actions)), repeat=self.n_agents))
 
         # Initialize agents with a name (agent i) and an ID (i)

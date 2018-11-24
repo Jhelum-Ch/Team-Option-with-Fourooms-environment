@@ -50,12 +50,16 @@ if __name__ == '__main__':
     parser.add_argument('--n_options', help='Number of options', type=int, default=4)
     parser.add_argument('--baseline', help="Use the baseline for the intra-option gradient", action='store_true', default=False)
     parser.add_argument('--temperature', help="Temperature parameter for softmax", type=float, default=1e-2)
-    parser.add_argument('--primitive', help="Augment with primitive", default=False, action='store_true')
+    parser.add_argument('--primitive', help="Augment with primitive", default=True, action='store_true')
 
     args = parser.parse_args()
 
     rng = np.random.RandomState(1234)
-    env = gym.make('FourroomsMA-v0')
+
+    # TODO:  since the code makes a lot of calls to internal attributes of the environment,
+    # TODO:  initializing with gym.make doesn't work
+    #env = gym.make('FourroomsMA-v0')
+    env = FourroomsMA()
     agents = [Agent(ID=i) for i in range(args.n_agents)]
 
     fname = '-'.join(['{}_{}'.format(param, val) for param, val in sorted(vars(args).items())])
@@ -66,58 +70,96 @@ if __name__ == '__main__':
     history = np.zeros((args.n_runs, args.n_episodes, args.n_agents+1))
     for run in range(args.n_runs):
         # Initialize for every run
-        features = Tabular(env.observation_space.n)
-        n_features, n_actions = len(features), env.action_space.n #len(features) = 1
 
-        belief = Belief(args.n_agents, states_list)
+        features = Tabular(env.observation_space.n, args.n_agents)
+        n_features, n_actions = len(features), env.action_space.n   #len(features) = 1
+
+        belief = Belief(args.n_agents, env.states_list)
+
+        # # This commented block is unverified
+        # available_optionIDs = [i for i in range(args.n_options)]  # option IDs for available options
+        # n_options_available = len(available_optionIDs)
+        # available_terminationIDs = [i for i in range(args.n_options)]  # termination IDs for available terminations
+        # n_terminations_available = len(available_terminationIDs)
+        #
+        #
+        # # The intra-option policies are linear-softmax functions
+        # policies = [SoftmaxPolicy(rng, n_features, n_actions, args.temperature) for _ in available_optionIDs]
+        # if args.primitive:
+        #     policies.extend([FixedActionPolicies(act, n_actions) for act in range(n_actions)])
+        #
+        # # The termination function are linear-sigmoid functions
+        # option_terminations = [SigmoidTermination(rng, n_features) for _ in available_terminationIDs]
+        # if args.primitive:
+        #     option_terminations.extend([OneStepTermination() for _ in range(n_actions)])
 
 
-        # The intra-option policies are linear-softmax functions
-        policies = [SoftmaxPolicy(rng, n_features, n_actions, args.temperature) for _ in available_optionIDs]
+        options = [Option() for _ in range(args.n_options)]
+        # tracks available options (IDs only)
+        available_optionIDs = [opt_id for opt_id in range(args.n_options)]
+
+        opt_id = 0
+        for o in options:
+            o.policy = SoftmaxPolicy(rng, n_features, n_actions, args.temperature)
+            o.termination = SigmoidTermination(rng, n_features)
+            o.ID = opt_id
+            opt_id += 1
+
         if args.primitive:
-            policies.extend([FixedActionPolicies(act, n_actions) for act in range(n_actions)])
+            primitive_options = [Option() for _ in range(n_actions)]
+            i = 0
+            actions = list(range(n_actions))
+            for o in primitive_options:
+                o.policy = FixedActionPolicies(actions[i], n_actions)
+                o.termination = OneStepTermination()
+                o.ID = opt_id
+                opt_id += 1
+                i += 1
 
+            options.extend(primitive_options)
+            n_options = len(available_optionIDs)
+            available_optionIDs.extend([a+n_options for a in actions])
 
-        # The termination function are linear-sigmoid functions
-        option_terminations = [SigmoidTermination(rng, n_features) for _ in available_terminationIDs]
-        if args.primitive:
-            option_terminations.extend([OneStepTermination() for _ in range(n_actions)])
 
         # Softmax policy over options
         #mu_policy = EgreedyPolicy(rng, args.nagents, nfeatures, args.noptions, args.epsilon)
-        mu_policy = SoftmaxPolicy(rng, n_features, n_options_available, args.temperature)
+        mu_policy = SoftmaxPolicy(rng, n_features, len(options), args.temperature)
 
-
-        available_optionIDs = [i for i in range(args.n_options)] #option IDs for available options
-        n_options_available = len(available_optionIDs)
-        available_terminationIDs = [i for i in range(args.n_options)] #termination IDs for available terminations
-        n_terminations_available = len(available_terminationIDs)
+        option_terminations = [o.termination for o in options]
 
         # Different choices are possible for the critic. Here we learn an
         # option-value function and use the estimator for the values upon arrival
         option_critic = IntraOptionQLearning(args.n_agents, args.discount, args.lr_critic, option_terminations, mu_policy.weights)
 
         # Learn Qomega separately
-        action_weights = np.zeros((n_features, n_options_available, n_actions))
+        action_weights = np.zeros((n_features, len(options), n_actions))
         action_critic = IntraOptionActionQLearning(args.n_agents, args.discount, args.lr_critic, option_terminations, action_weights, option_critic)
 
         # Improvement of the termination functions based on gradients
         termination_improvement= TerminationGradient(option_terminations, option_critic, args.lr_term)
 
+        policies = [o.policy for o in options]
+
         # Intra-option gradient improvement with critic estimator
         intraoption_improvement = IntraOptionGradient(policies, args.lr_intra)
 
+
         for episode in range(args.nepisodes):
             if episode == 1000:
-                env.goals = rng.choice(possible_next_goals, arg.ngoals, replace=False)
-                print('************* New goals : ', env.goal)
+                env.goals = rng.choice(possible_next_goals, args.ngoals, replace=False)
+                print('************* New goals : ', env.goals)
 
             phi = features(env.reset())
 
+            # ----------- Tested up to here -------------
+            # TODO: Continue debugging here.
+            #
+            # TODO:     Note that instead of using separate lists of available_policiesIDs and available_terminationIDs,
+            # TODO:     I am changing the code to use available_optionIDs, just like in main.py (where the variable was named free_options).
+            # TODO:     This will make the code simpler and easier to follow. It also makes it less prone to policy and termination mismatch.
 
-            available_optionIDs = [i for i in range(args.n_options)] #option IDs for available options
+
             n_options_available = len(available_optionIDs)
-            available_terminationIDs = [i for i in range(args.n_options)] #termination IDs for available terminations
             n_terminations_available = len(available_terminationIDs)
 
 
@@ -129,7 +171,6 @@ if __name__ == '__main__':
             joint_action = [policies[joint_optionIDs[i]].sample(phi) for i in range(len(joint_optionIDs))]
             option_critic.start(phi, joint_option)
             action_critic.start(phi, joint_option, joint_action)
-
 
 
             cumreward = 0.

@@ -9,7 +9,7 @@ from fourroomsEnv import FourroomsMA
 from option import Option
 
 env = FourroomsMA()
-belief = Belief(env.n_agents)   # sample_count if different from default (1000)
+belief = Belief(env.n_agents, env.cell_list)   # sample_count if different from default (1000)
 
 R = np.random.RandomState(1337)
 
@@ -39,7 +39,7 @@ class RandomAlgo:
 
 # This would normally be replaced by the full Option Critic architecture
 # TODO: Initialize with real algorihtm.
-algo =  RandomAlgo()
+algo = RandomAlgo()
 
 n_options = env.n_agents + 1
 
