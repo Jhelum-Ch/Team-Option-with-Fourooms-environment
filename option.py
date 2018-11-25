@@ -12,7 +12,7 @@ class Option(object):
         # termination function beta
         self.termination = None
         # broadcast action (0: does not broadcast. 1: broadcasts.)
-        self.broadcast = 0
+        # self.broadcast = 0
         # ID
         self.ID = None
 
