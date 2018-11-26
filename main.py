@@ -1,3 +1,8 @@
+"""
+Skeleton Main code to meant to run the workflow. Incomplete in that it lacks elements from the Option-Critic architecture
+
+"""
+
 import argparse
 import random
 
@@ -37,7 +42,7 @@ class Tabular:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--n_agents', help='Number of agents', type=int, default=1)
+    parser.add_argument('--n_agents', help='Number of agents', type=int, default=3)
     parser.add_argument('--n_goals', help='Number of goals', type=int, default=1)
     parser.add_argument('--discount', help='Discount factor', type=float, default=0.99)
     parser.add_argument('--lr_term', help="Termination gradient learning rate", type=float, default=1e-3)
@@ -59,8 +64,7 @@ if __name__ == '__main__':
     # TODO:  since the code makes a lot of calls to internal attributes of the environment,
     # TODO:  initializing with gym.make doesn't work
     #env = gym.make('FourroomsMA-v0')
-    env = FourroomsMA()
-    agents = [Agent(ID=i) for i in range(args.n_agents)]
+    env = FourroomsMA(n_agents=args.n_agents)
 
     fname = '-'.join(['{}_{}'.format(param, val) for param, val in sorted(vars(args).items())])
     fname = 'optioncritic-fourroomsMA-' + fname + '.npy'
@@ -96,7 +100,7 @@ if __name__ == '__main__':
 
         options = [Option() for _ in range(args.n_options)]
         # tracks available options (IDs only)
-        available_optionIDs = [opt_id for opt_id in range(args.n_options)]
+        free_optionIDs = [opt_id for opt_id in range(args.n_options)]
 
         opt_id = 0
         for o in options:
@@ -117,8 +121,8 @@ if __name__ == '__main__':
                 i += 1
 
             options.extend(primitive_options)
-            n_options = len(available_optionIDs)
-            available_optionIDs.extend([a+n_options for a in actions])
+            n_options = len(free_optionIDs)
+            free_optionIDs.extend([a+n_options for a in actions])
 
 
         # Softmax policy over options
@@ -144,7 +148,7 @@ if __name__ == '__main__':
         intraoption_improvement = IntraOptionGradient(policies, args.lr_intra)
 
 
-        for episode in range(args.nepisodes):
+        for episode in range(args.n_episodes):
             if episode == 1000:
                 env.goals = rng.choice(possible_next_goals, args.ngoals, replace=False)
                 print('************* New goals : ', env.goals)
@@ -154,123 +158,190 @@ if __name__ == '__main__':
             # ----------- Tested up to here -------------
             # TODO: Continue debugging here.
 
+
             # Check how to sample from Mu-policy distribution without replacement
-            joint_optionIDs = random.sample(available_optionIDs, k = args.n_agents) # All agents sample IDs from pool of available options without replacement
+            start_optionIDs = rng.choice(free_optionIDs, env.n_agents, replace=False)
 
-            #joint_option = [mu_policy.sample(Phi[:,i]) for i in range(joint_optionIDs)]
-            #joint_action = [pi_policies[joint_option[i]].sample(Phi[:,i]) for i in range(args.n_agents)]
-            joint_action = [policies[joint_optionIDs[i]].sample(phi) for i in range(len(joint_optionIDs))]
-            option_critic.start(phi, joint_option)
-            action_critic.start(phi, joint_option, joint_action)
+            # Remove sampled options from the free ones
+            for opt in start_optionIDs:
+                free_optionIDs.remove(opt)
 
+            for i in range(env.n_agents):
+                env.agents[i].option = options[start_optionIDs[i]]
 
+            option_belief = start_optionIDs.copy()
+
+            # joint_option = [a.option for a in env.agents]       # Actual options, not IDs.
+
+            joint_action = [o.policy.sample(phi)]
+
+            # Initialize critic
+            # TODO: Check if initialization is correct. Especially, check if need to pass actual options or option IDs
+            option_critic.start(phi, start_optionIDs)
+            action_critic.start(phi, start_optionIDs, joint_action)
+
+            # Most up-to-date information on which options the agents are running
+            option_belief = [None]*args.n_agents
+
+            # Initialize tracking variables
             cumreward = 0.
             duration = 1
             option_switches = [0 for _ in range(args.n_agents)]
             avgduration = [0. for _ in range(args.n_agents)]
-            broadcasts = [agent.Option().broadcast for agent in agents]
+            broadcasts = [0 for _ in range(args.n_agents)]
+
 
             # The following two are required to check for broadcast for each agent in every step
             phi0 = np.zeros(n_features)
             phi1 = np.copy(phi0)
 
-
-            observation_samples = np.zeros((belief.N, args.n_agents,))
-            for i in range(belief.N):
-                for j in range(args.n_agents):
-                    observation_samples[i,j] = env.currstate[j]
-
             for step in range(args.n_steps):
 
-                # 1. Start with a pool of available options and terminations
-                available_optionIDs = [x for x in available_optionIDs if x not in joint_optionIDs]
-                available_terminationIDs = [x for x in available_terminationIDs if x not in joint_optionIDs]
+                # 1. Sample s_t ~ b_t
+                state = belief.sample_single_state()
 
 
-                # 2. Sample a joint_state (tuple) from the initial belief
-                joint_state = belief.sample_single_state()
+                # 2. Sample a_t = [ a_t^j ~ pi^j(s_t) ]
+                actions = [a.option.policy.sample_action(state) for a in env.agents]
 
-                # The following two are required to check for broadcast for each agent in every step
-                joint_state_with_broadcast = np.copy(joint_state)
-                joint_state_without_broadcast = np.copy(joint_state)
-
-
-                # 3. Compute actual actions
-                actual_joint_actions = [a.option.policy.sample_action(joint_state) for a in agents]
-
-                # 4. Get reward from environment based on on actual actions
-                reward, done, _ = env.step(actual_joint_action)
-
-               # The following two are required to check for broadcast for each agent in every step
-                reward_with_broadcast = np.copy(reward)
-                reward_without_broadcast = np.copy(reward)
-
-                # sample_observations = belief.sample()
-                # update_belief = belief.updateBeliefParameters(sample_observations)
+                # 2.1 Simulate actions a_t based on most up do date information on running options
+                simu_actions = [options[ID].policy.sample_action(state) for ID in option_belief]
 
 
-               # 5. For all agents, determine if they broadcast
+                # 3. Compute s_t+1 = s_t + a_t assuming that the environment layout is known and that the transition is deterministic
+                # Handles wall collisions but not agent collisions
+                next_state = [None for _ in range(env.n_agents)]
+
+                for i in range(env.n_agents):
+                    next_cell = tuple(env.tocellcoord[state[i]] + env.directions[simu_actions[i]])
+                    if env.occupancy[next_cell] == 0:
+                        next_state[i] = env.tocellnum[next_cell]
+                    else:
+                        next_state[i] = state[i]
+
+                # 4. Enact actions on reward
+                step_reward, done, _ = env.step(actions)
+
+                # 5. Check option termination and assign new options. Also force broadcast on termination
+                broadcasts = [None] * env.n_agents
+                for i in range(env.n_agents):
+                    a = env.agents[i]
+                    if a.option.termination.sample(next_state) == 1:
+                        optID = a.option.ID
+                        free_optionIDs.append(optID)
+                        a.option = None
+                        broadcasts[i] = 1   # force broadcast
+
+                        # Broadcast the option that *just* terminated, i.e. *not* the new one
+                        option_belief[i] = optID
+
+                # Sort free (available) option IDs.
+                free_optionIDs.sort()
+
+                for a in env.agents:
+                    if a.option is None:
+
+                        # TODO: Sample new options without replacement from mu_policy. 
+                        new_opt = mu_policy.sample(phi)
+                        free_optionIDs.remove(new_opt)
+                        a.option = options[new_opt]
+
+
+
+                # TODO: Check following two lines along with (***) in loop below. I am not certain what they do.
                 observation_samples_agent_with_braodcast = np.zeros_like(observation_samples)
                 observation_samples_agent_without_braodcast = np.zeros_like(observation_samples)
 
-                for i in range(args.n_agents):
-                    a = agents[i]
+                # 6. For all agents, determine if they broadcast
+                for i in range(env.n_agents):
+                    a = env.agents[i]
                     if broadcasts[i] is None:
-                        broadcasts[i] = Broadcast().chooseBroadcast(next_state, a.option.ID)
+                        B = Broadcast().chooseBroadcast(next_state, a.option.ID)
+                        broadcasts[i] = B
 
-                    reward_with_broadcast  += env.broadcast_penalty
-                    observation_samples_agent_with_braodcast[:,i] =  joint_state_with_broadcast[i]*np.ones(np.shape(observation_samples)[0])
+                        if B == 1:
+                            # Update option belief based on non-forced broadcast (i.e. not a termination)
+                            option_belief[i] = optID
+
+                    # TODO: (***) Check following labelled block of text:
+
+                    # --------From here----------
+
+                    reward_with_broadcast += env.broadcast_penalty
+                    observation_samples_agent_with_braodcast[:, i] = joint_state_with_broadcast[i] * np.ones(
+                        np.shape(observation_samples)[0])
                     newBelief_with_broadcast = belief.updateBeliefParameters(observation_samples_agent_with_braodcast)
                     next_sampleJointState_with_broadcast = newBelief_with_broadcast.sample_single_state()
-                    phi1 = features(next_sampleJointState_with_broadcast)[:,i]
+                    phi1 = features(next_sampleJointState_with_broadcast)[:, i]
                     Q1 = critic.update(phi1, joint_option, reward_with_broadcast, done)
 
-
-                    newBelief_without_broadcast = belief.updateBeliefParameters(observation_samples_agent_without_braodcast)
+                    newBelief_without_broadcast = belief.updateBeliefParameters(
+                        observation_samples_agent_without_braodcast)
                     next_sampleJointState_without_broadcast = newBelief_without_broadcast.sample_single_state()
-                    phi0 = features(next_sampleJointState_without_broadcast)[:,i]
+                    phi0 = features(next_sampleJointState_without_broadcast)[:, i]
                     Q0 = critic.update(phi0, joint_option, reward_without_broadcast, done)
 
-
-                    broadcasts[i] = Broadcast(goals, a, joint_optionIDs[i]).broadcastBasedOnQ(a, Q0, Q1)
-
-
-                # 6. Get observation based on broadcasts
-                y = env.get_observation(broadcasts)
+                    # ----------To here----------
 
 
                 # 7. Decrease reward based on number of broadcasting agents
-                reward += np.sum(broadcasts)*env.broadcast_penalty
+                step_reward += np.sum(broadcasts)*env.broadcast_penalty
+
+                # 8. Get observation based on broadcasts
+                y = env.get_observation(broadcasts)
+
+                # # 8.1 Update option information
+                # # Note: If this block is UNcommented, then it means
+                # # agents are broadcasting NEW option upon termination, not terminating one.
+                # for i in range(env.n_agents):
+                #     if broadcasts[i] == 1:
+                #         option_belief[i] = env.agents[i].option.ID
 
 
-                # 8. Termination might occur upon entering the new state. Then, choose a new option from the pool pf available options
-                option_terminationList = [option_terminations[joint_optionIDs[i]].sample(phi) for i in range(args.n_agents)]
-                joint_action = policies[joint_optionIDs].sample(phi)
+                # # Initialize samples to starting state
+                # if step == 0:
+                #     samples = np.zeros((belief.N, env.n_agents,))
+                #     for i in range(belief.N):
+                #         for j in range(env.n_agents):
+                #             samples[i,j] = env.currstate[j]
+                # else:
+                #     samples = belief.sample()
 
-                n_terminated_agents = np.sum(1.0*option_terminationList)
 
-                for i, agent in enumerate(agents):
-                    terminated_agentIDs = []
-                    if option_terminationList[i]:
-                        broadcasts[i] = 1.0 #force broadcast on termination
-                        option_switches[i] += 1
-                        avgduration[i] += (1./option_switches[i])*(duration - avgduration[i])
-                        duration = 1
-                        terminated_agentIDs.append(i)
-                        available_optionIDs.append(joint_optionIDs[i]) #terminated option becomes available
-                        available_terminationIDs.append(joint_optionIDs[i]) #terminated option becomes available
+                # TODO: Right now, samples are drawn every step. Check (*) below for alternative.
+                # Note: There is no "initial" batch of samples, i.e. starting joint state is unknown to the belief.
+                samples = belief.sample()
 
-                # Terminated agents simultaneously choose without replacement the option IDs from the pool of
-                #available options
-                new_optionIDs_for_terminated_agents = random.sample(available_optionIDs, k = n_terminated_agents) # Check how to sample without replacement from mu_policy distribution
 
-                # New joint option
+                # 9. Compute data Samples based on y, by filling the gaps from the belief.
+                if np.sum(broadcasts) > 0:
+
+                    # TODO: (*) Verify if the two lines below are correct. I believe samples should be drawn every step.
+                    # Samples are updated iff there was at least one broadcast
+                    # samples = belief.sample()
+
+                    for i in range(env.n_agents):
+                        if y[i] is not None:
+                            # Correct sampled states with broadcasted info
+                            for j in range(belief.N):
+                                samples[j, i] = y[i]
+
+                            # Correct next state info (used below for termination decision)
+                            next_state[i] = y[i]
+
+                # 10. Update belief
+                belief.updateBeliefParameters(samples)
+
+                # 11. Critic update
+
+                # TODO: Check critic update below
+                # ----------From here---------
+
+                # New (ground truth) joint option:
+                joint_optionIDs = [a.option.ID for a in env.agents]
                 for i, j in enumerate(terminated_agentIDs):
-                    joint_optionIDs[j] = new_optionIDs_for_terminated_agents[i]
+                    # joint_optionIDs[j] = new_optionIDs_for_terminated_agents[i]
                     joint_action[j] = policies[joint_optionIDs[j]].sample(phi)
-
-
-
 
                 # Critic update
                 update_target = critic.update(phi, joint_option, reward, done)
@@ -286,28 +357,19 @@ if __name__ == '__main__':
                     # Termination update
                     termination_improvement.update(phi, joint_option)
 
+                # ------------To here---------
 
-                cumreward += reward
+                cumreward += step_reward
                 duration += 1
                 if done:
                     break
 
+            # TODO: saving and printing below this line unverified.
             history[run, episode, 0] = step
-            #history[run, episode, [1:end] = avgduration
-            print('Run {} episode {} steps {} cumreward {} avg. duration {} switches {}'.format(run, episode, step, cumreward, avgduration, option_switches))
+            # history[run, episode, [1:end] = avgduration
+            print(
+            'Run {} episode {} steps {} cumreward {} avg. duration {} switches {}'.format(run, episode, step, cumreward,
+                                                                                          avgduration, option_switches))
         np.save(fname, history)
-        dill.dump({'intra_optionPolicies':policies, 'term':option_terminations}, open('oc-options.pl', 'wb'))
+        dill.dump({'intra_optionPolicies': policies, 'term': option_terminations}, open('oc-options.pl', 'wb'))
         print(fname)
-
-
-
-
-
-
-
-
-
-
-
-
-

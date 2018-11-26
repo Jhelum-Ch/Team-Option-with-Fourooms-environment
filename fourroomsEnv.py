@@ -2,6 +2,7 @@ import numpy as np
 import itertools
 from collections import Counter
 from enum import IntEnum
+import gym
 from gym import core, spaces
 from gym.envs.registration import register
 from agent import Agent
@@ -12,7 +13,7 @@ if sys.version_info[0] < 3:
     print("Warning! Python 2 can lead to unpredictable behaviours. Please use Python 3 instead.")
 
 
-class FourroomsMA:
+class FourroomsMA(gym.Env):
 
     # Defines the atomic actions for the agents
     class Actions(IntEnum):
@@ -53,7 +54,7 @@ wwwwwwwwwwwww
 
         # Intialize atomic actions, and action spaces both for individual agents and for the joint actions a = (a^0, a^1,..., a^n)
         self.agent_actions = FourroomsMA.Actions
-        self.agent_action_space = spaces.Discrete(len(self.agent_actions))  # Not sure if needed
+        self.action_space = spaces.Discrete(len(self.agent_actions))
         self.joint_actions = list(itertools.product(range(len(self.agent_actions)), repeat=self.n_agents))
 
         # Initialize agents with a name (agent i) and an ID (i)
@@ -167,13 +168,12 @@ wwwwwwwwwwwww
 
         rewards = [0] * self.n_agents
 
+        reward = 0
+
         if not done:
 
             nextcells = [None] * self.n_agents
             rand_nums = self.rng.uniform(size=self.n_agents)
-
-            print(rand_nums)
-
 
             for i in range(self.n_agents):
 
@@ -221,7 +221,9 @@ wwwwwwwwwwwww
 
             self.currstate = tuple(nextcells)
 
-        return rewards, done, None      # Observations are not returned; they need to be queried with broadcasts
+            reward = np.sum(rewards)
+
+        return reward, done, None      # Observations are not returned; they need to be queried with broadcasts
 
 
     # get the list of common observation, y_list, based on the broadcast action of each agent
@@ -246,7 +248,7 @@ wwwwwwwwwwwww
 
 register(
     id='FourroomsMA-v0',
-    entry_point='fourroomsMA:FourroomsMA',
+    entry_point='fourroomsEnv:FourroomsMA',
     timestep_limit=20000,
     reward_threshold=1,  # should we modify this?
 )
