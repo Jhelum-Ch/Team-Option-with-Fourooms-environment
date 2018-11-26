@@ -153,15 +153,6 @@ if __name__ == '__main__':
 
             # ----------- Tested up to here -------------
             # TODO: Continue debugging here.
-            #
-            # TODO:     Note that instead of using separate lists of available_policiesIDs and available_terminationIDs,
-            # TODO:     I am changing the code to use available_optionIDs, just like in main.py (where the variable was named free_options).
-            # TODO:     This will make the code simpler and easier to follow. It also makes it less prone to policy and termination mismatch.
-
-
-            n_options_available = len(available_optionIDs)
-            n_terminations_available = len(available_terminationIDs)
-
 
             # Check how to sample from Mu-policy distribution without replacement
             joint_optionIDs = random.sample(available_optionIDs, k = args.n_agents) # All agents sample IDs from pool of available options without replacement
@@ -181,7 +172,7 @@ if __name__ == '__main__':
 
             # The following two are required to check for broadcast for each agent in every step
             phi0 = np.zeros(n_features)
-            phi1 = mp.copy(phi0)
+            phi1 = np.copy(phi0)
 
 
             observation_samples = np.zeros((belief.N, args.n_agents,))
@@ -227,7 +218,6 @@ if __name__ == '__main__':
                     if broadcasts[i] is None:
                         broadcasts[i] = Broadcast().chooseBroadcast(next_state, a.option.ID)
 
-
                     reward_with_broadcast  += env.broadcast_penalty
                     observation_samples_agent_with_braodcast[:,i] =  joint_state_with_broadcast[i]*np.ones(np.shape(observation_samples)[0])
                     newBelief_with_broadcast = belief.updateBeliefParameters(observation_samples_agent_with_braodcast)
@@ -268,7 +258,6 @@ if __name__ == '__main__':
                         duration = 1
                         terminated_agentIDs.append(i)
                         available_optionIDs.append(joint_optionIDs[i]) #terminated option becomes available
-                        n_options_available = len(available_optionIDs)
                         available_terminationIDs.append(joint_optionIDs[i]) #terminated option becomes available
 
                 # Terminated agents simultaneously choose without replacement the option IDs from the pool of

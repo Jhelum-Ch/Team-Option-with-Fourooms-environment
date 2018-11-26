@@ -40,9 +40,6 @@ class EgreedyPolicy:
     def sample(self, phi):
         if self.rng.uniform() < self.epsilon:
             sample_action = int(self.rng.randint(self.weights.shape[1]))
-
-        # TODO: Clearly missing an else
-
         sample_action = int(np.argmax(self.value(phi)))
         return sample_action
 
