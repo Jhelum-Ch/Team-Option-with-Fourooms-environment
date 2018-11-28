@@ -17,6 +17,8 @@ from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearn
 from distributed.broadcast import Broadcast
 from distributed.belief import Belief
 
+from conjugate_prior.conjugate_prior.dirichlet import DirichletMultinomial
+
 from option import Option
 from agent import Agent
 from fourroomsEnv import FourroomsMA
@@ -78,6 +80,13 @@ if __name__ == '__main__':
         n_features, n_actions = len(features), env.action_space.n   #len(features) = 1
 
         belief = Belief(args.n_agents, env.states_list)
+
+        # Alternatively, for DirichletMultinomial conjugate prior
+        # belief = DirichletMultinomial() # alpha is nx1 vector
+
+
+        
+
 
         # # This commented block is unverified
         # JC-comment: I have uncommented the intra-option policies and termination function
@@ -195,6 +204,8 @@ if __name__ == '__main__':
             # The following two are required to check for broadcast for each agent in every step
             phi0 = np.zeros(n_features)
             phi1 = np.copy(phi0)
+
+            
 
             for step in range(args.n_steps):
 
@@ -319,6 +330,29 @@ if __name__ == '__main__':
                 samples = belief.sample()
 
 
+
+
+
+                ## For conjugate prior do the following block
+                ##__________ START: conjugate prior belief update and sample next joint-state________________
+
+
+                ## Get observation samples
+                #sample_size = 1000
+                #samples = np.random.choices(states_list, sample_size, p = belief)
+
+                ## update dirichlet multinomial belief 
+                #belief_new = belief.update(samples)
+
+                #belief = belief_new
+
+                ## Draw a sample of next joint_state from belief
+                #next_state = np.random.choice(states_list, p = belief) 
+                ##________________ END: conjugate prior update and sample next joint-state__________________
+
+
+
+
                 # 9. Compute data Samples based on y, by filling the gaps from the belief.
                 if np.sum(broadcasts) > 0:
 
@@ -331,6 +365,10 @@ if __name__ == '__main__':
                             # Correct sampled states with broadcasted info
                             for j in range(belief.N):
                                 samples[j, i] = y[i]
+
+                            # For Dirichlet conjugate prior:
+                            #for j in range(sample_size):
+                            #    samples[j, i] = y[i]
 
                             # Correct next state info (used below for termination decision)
                             next_state[i] = y[i]
