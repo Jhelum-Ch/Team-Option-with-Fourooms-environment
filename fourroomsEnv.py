@@ -88,8 +88,12 @@ wwwwwwwwwwwww
 
 
         # Generate the set of joint states (s^0,..., s^n), discarding states with agent collisions (e.g. (2,2,3) )
+        '''
         self.states_list = [s for s in list(itertools.product(self.cell_list, repeat=self.n_agents))
                             if len(s) == len(np.unique(s))]
+        '''
+        
+        self.states_list = list(itertools.permutations(self.cell_list, self.n_agents)) #faster than itertools.product
 
         self.goals = [50, 62, 71, 98, 103]  # fixed goals
         self.goals.sort()                   # important if not already sorted in line above
