@@ -15,6 +15,8 @@ if sys.version_info[0] < 3:
 
 class FourroomsMA(gym.Env):
 
+    metadata = {'render.modes': ['human']} # could add 'rgb_array' if we want to turn into video
+
     # Defines the atomic actions for the agents
     class Actions(IntEnum):
         # move
@@ -244,6 +246,9 @@ wwwwwwwwwwwww
         self.discovered_goals.sort()
 
         return y_list
+
+    def _render(self, mode='human', close=False):
+    pass
 
 
 register(
