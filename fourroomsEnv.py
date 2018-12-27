@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 import itertools
 from collections import Counter
 from enum import IntEnum
@@ -15,7 +16,7 @@ if sys.version_info[0] < 3:
 
 class FourroomsMA(gym.Env):
 
-    metadata = {'render.modes': ['human']} # could add 'rgb_array' if we want to turn into video
+    metadata = {'render.modes': ['state_pixel_rgb']} 
 
     # Defines the atomic actions for the agents
     class Actions(IntEnum):
@@ -53,6 +54,21 @@ wwwwwwwwwwwww
         # 0 : free cell
         # 1 : wall
         self.occupancy = np.array([list(map(lambda c: 1 if c == 'w' else 0, line)) for line in layout.splitlines()])
+
+        # create frame for RGB visualization
+        self.occupancy_visual = no.zeros((13,13,3))
+        for i in range(13):
+            for j in range(13):
+                if self.occupancy[i,j] == 0:
+                    self.occupancy_visual[i,j,0] = 255
+                    self.occupancy_visual[i,j,1] = 255
+                    self.occupancy_visual[i,j,2] = 255
+
+                else: # a shade of grey
+                    self.occupancy_visual[i,j,0] = 14
+                    self.occupancy_visual[i,j,1] = 14
+                    self.occupancy_visual[i,j,2] = 14
+
 
         # Intialize atomic actions, and action spaces both for individual agents and for the joint actions a = (a^0, a^1,..., a^n)
         self.agent_actions = FourroomsMA.Actions
@@ -223,9 +239,33 @@ wwwwwwwwwwwww
 
             self.currstate = tuple(nextcells)
 
+            # make the first agent's state red for visual
+            (row_agent1,col_agent1) = self.tocellcoord[self.currstate[0]]
+            self.occupancy_visual[row_agent1,col_agent1,0] = 255
+            self.occupancy_visual[row_agent1,col_agent1,1] = 0
+            self.occupancy_visual[row_agent1,col_agent1,2] = 0
+
+
+
+
+            # make the second agent's state green for visual
+            (row_agent2,col_agent2) = self.tocellcoord[self.currstate[1]]
+            self.occupancy_visual[row_agent2,col_agent2,0] = 0
+            self.occupancy_visual[row_agent2,col_agent2,1] = 255
+            self.occupancy_visual[row_agent2,col_agent2,2] = 0
+
+
+            # make the third agent's state blue for visual
+            (row_agent3,col_agent3) = self.tocellcoord[self.currstate[2]]
+            self.occupancy_visual[row_agent3,col_agent3,0] = 0
+            self.occupancy_visual[row_agent3,col_agent3,1] = 0
+            self.occupancy_visual[row_agent3,col_agent3,2] = 255
+
+
+
             reward = np.sum(rewards)
 
-        return reward, done, None      # Observations are not returned; they need to be queried with broadcasts
+        return reward, self.occupancy_visual, done, None      # Observations are not returned; they need to be queried with broadcasts
 
 
     # get the list of common observation, y_list, based on the broadcast action of each agent
@@ -247,8 +287,13 @@ wwwwwwwwwwwww
 
         return y_list
 
-    def _render(self, mode='human', close=False):
-    pass
+    def _render(self, mode='state_pixel_rgb', close=False):
+        plt.imshow(self.occupancy_visual)
+        plt.show()
+
+
+
+
 
 
 register(
