@@ -3,10 +3,18 @@ from scipy.misc import logsumexp
 
 
 class SoftmaxPolicy:
-    def __init__(self, rng, n_features, n_actions, temp=1.):
-        self.rng = rng
-        self.n_actions = n_actions
-        self.weights = np.zeros((n_features, n_actions))  # we assume that n_features and n_actions for all agents are same
+    def __init__(self, env, temp=1.):
+        '''
+        
+        :param rng:
+        :param n_features: size of state space
+        :param n_actions:
+        :param temp:
+        '''
+        self.rng = np.random.RandomState(1234)
+        # self.n_actions = n_actions
+        self.weights = np.zeros((env.cell_list, len(env.agent_actions)))  # we assume that n_features and n_actions for all agents
+        # are same
         self.temp = temp
 
     def value(self, phi, action = None):
