@@ -58,7 +58,7 @@ wwwwwwwwwwwww
 
         # Initialize agents with a name (agent i) and an ID (i)
         self.agents = [Agent(ID = i, name = 'agent %d' % i) for i in range(self.n_agents)]
-        self.agentNames = ['agent %d' % i for i in range(self.n_agents)]
+        self.agentNames = ['agent %d' % i for i in range(self.n_agents)]    #do we need this?
 
         self.observation_space = spaces.Discrete(np.sum(self.occupancy == 0))
 
@@ -176,7 +176,7 @@ wwwwwwwwwwwww
             nextcells = [None] * self.n_agents
             rand_nums = self.rng.uniform(size=self.n_agents)
 
-            print(rand_nums)
+            # print(rand_nums)
 
 
             for i in range(self.n_agents):
