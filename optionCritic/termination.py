@@ -1,11 +1,12 @@
 import numpy as np
 from scipy.special import expit
+from modelConfig import params
 
 
 class SigmoidTermination:
-    def __init__(self, rng, n_features):
-        self.rng = rng
-        self.weights = np.zeros((n_features,))
+    def __init__(self, n_states):
+        self.rng = params['train']['seed']
+        self.weights = np.zeros(n_states)
 
     def pmf(self, phi):
         pmf = expit(np.sum(self.weights[phi]))
@@ -17,7 +18,7 @@ class SigmoidTermination:
 
     def grad(self, phi): # Check this formula
         terminate = self.pmf(phi)
-        return [p*(1. - p) for p in terminate], phi
+        return terminate*(1. - terminate), phi
 
 
 class OneStepTermination:
