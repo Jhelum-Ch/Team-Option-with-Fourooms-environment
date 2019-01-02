@@ -1,4 +1,14 @@
 import numpy as np
+from modelConfig import params
+from optionCritic.option import Option
+from optionCritic.policies import SoftmaxPolicy
+
+def createOptions(env):
+    options = []
+    for i in range(params['agent']['n_options']):
+        options.append(Option(i, SoftmaxPolicy(env)))
+        
+    return options
 
 class StateEncoder:
     '''
