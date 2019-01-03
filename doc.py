@@ -1,4 +1,4 @@
-from utils.belief import Belief
+from optionCritic.belief import Belief
 from random import shuffle
 import numpy as np
 
