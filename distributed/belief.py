@@ -3,7 +3,7 @@ import scipy.stats
 import random
 
 
-class Belief:
+class BeliefGaussian:
     #
     '''
     Implemented as in https://en.wikipedia.org/wiki/Conjugate_prior
@@ -85,3 +85,104 @@ class Belief:
             scale_tmp = self.psi + C + (self.k0 * self.N) / (self.k0 + self.N) * np.dot((x_bar - self.mu0).T,
                                                                                         (x_bar - self.mu0))
             self.cov_itr = scipy.stats.invwishart.rvs(v, scale_tmp)
+
+
+
+class TruncatedNormal:
+
+    def __init__(self, mu, sigma, a, b):
+        self.mu = mu
+        self.sigma = sigma
+        self.a = a
+        self.b = b
+        self.num_params = 1000
+        self.x = np.linspace(self.a, self.b, self.num_params)
+        
+        
+    def pdf(self):
+        deno = self.sigma*(stats.norm.cdf(self.b, loc=self.mu, scale=self.sigma) - stats.norm.cdf(self.a, loc=self.mu, scale=self.sigma))
+        nume = [stats.norm.pdf(self.x[i], loc=self.mu, scale=self.sigma) for i in range(len(self.x))]
+        
+        return (nume/deno)/np.sum(nume/deno)
+    
+    def sample(self):
+        return np.random.choice(self.x, p=self.pdf())    
+
+
+# def rejSample(t, mu, sigma):
+#     while True:
+#         Y = t.sample()
+#         X = np.rint(Y)
+#         Z = np.abs(X) + 0.5
+#         U = np.random.uniform(0,1)
+#         if -2.*(sigma**2)*np.log(U) >= (Z-mu)**2 - (Y-mu)**2:
+#             break
+#     return X
+
+
+class discreteTruncMultivariateGaussian():
+    def __init__(self, mu_vec, sigma_mat, a, b):
+        self.mu_vec = mu_vec
+        self.sigma_mat = sigma_mat
+        self.a = a
+        self.b = b
+        #super(discreteTruncMultivariateGaussian, self).__init__()
+        
+    def truncateNormalpdf(self,x):
+        rv = scipy.stats.truncnorm(self.a, self.b)
+        return rv.pdf(x)
+    
+    def truncateNormalsample(self, mu, sigma, size):
+        return truncnorm.rvs(self.a, self.b, loc = mu, scale = sigma, size=size, random_state=None) 
+    
+    def rejSample(self):
+        X = np.zeros(len(self.mu_vec))
+        Y = np.zeros_like(X)
+        for i in range(len(self.mu_vec)):
+            if i==0:
+                mu = self.mu_vec[i] 
+                sigma = self.sigma_mat[i,i]  
+
+            elif i==1:
+                A = self.sigma_mat[i-1,i-1]
+                A = float(A)
+
+                a = self.sigma_mat[i-1,i]
+                a = float(a)
+
+                W = Y[i-1]
+                W = float(W)
+
+                mu = self.mu_vec[i] + a*(1./A)*W 
+                sigma = self.sigma_mat[i,i] - a*(1./A)*a
+                
+            else:
+                A = self.sigma_mat[0:i-1,0:i-1]
+                A = np.reshape(A, (i-1,i-1))
+
+                a = self.sigma_mat[0:i-1,i]
+                a = np.reshape(a, (i-1,1))
+
+                W = Y[0:i-1]
+                W = np.reshape(W, (i-1,1))
+
+                mu = np.array(self.mu_vec[i] + np.matmul(a.T, np.matmul(np.linalg.inv(A),W)))
+                sigma = np.array(self.sigma_mat[i,i] - np.matmul(a.T, np.matmul(np.linalg.inv(A),a)))
+
+
+            flag = 0
+            while flag==0:
+                #Y = t.sample()
+                y = self.truncateNormalsample(mu, sigma, 1)
+                x = np.rint(y)
+                z = np.abs(x) + 0.5
+                u = np.random.uniform(0,1)
+                if -2.*(sigma**2)*np.log(u) >= (z-mu)**2 - (y-mu)**2:
+                    flag=1
+            
+            X[i] = int(x)
+            Y[i] = y
+        return X     
+
+
+
