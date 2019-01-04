@@ -184,5 +184,15 @@ class discreteTruncMultivariateGaussian():
             Y[i] = y
         return X     
 
+'''
+In order to generate a vector X of discrete rvs from truncated normal, do 
+X = discreteTruncMultivariateGaussian(mu_vec, sigma_mat, a, b).rejSample(),
+where 
+mu_vec = mean vector
+sigma_mat = covariance matrix 
+a = lower bound of support
+b = upper bound of support
+'''
+
 
 
