@@ -22,7 +22,7 @@ class IntraOptionQLearning:
 		'''
 		self.last_joint_state = joint_state
 		self.last_joint_option = joint_option
-		self.last_value = self.getQvalue(joint_state, joint_option)		# TODO: need a scalar
+		self.last_value = self.getQvalue(joint_state, joint_option)
 
 	def getQvalue(self, joint_state, joint_option=None):
 		if joint_option is None:
@@ -78,32 +78,30 @@ class IntraOptionActionQLearning:
 		self.terminations = terminations #terminations is a list
 		self.weights = weights
 		self.qbigomega = qbigomega
+		
+	def start(self, joint_state, joint_option):
+		'''
+		:param joint_state: tuple of state encodings. Ranges from (0, 0, 0) to (103, 103, 103)
+		:param joint_option:
+		:return:
+		'''
+		self.last_joint_state = joint_state
+		self.last_joint_option = joint_option
+		self.last_value = self.getQvalue(joint_state, joint_option)
 
-	def value(self, phi, joint_option, joint_action): #Phi is a matrix, joint_option and joint_action are lists
-		out[i] = np.sum(self.weights[phi, joint_option[i], joint_action[i]], axis=0)
+	def getQvalue(self, joint_state, joint_option, action):	#TODO: fix this
+		return self.weights[joint_state][joint_option][action]
+	
+	def terminationProbOfAtLeastOneAgent(self, joint_state, joint_option):
+		# calculates termination probability of at least one agent
+		prod = 1.0
+		for idx in range(self.n_agents):
+			# prod *= 1 - self.terminations[self.agents[idx].option].pmf(joint_state[idx])
+			prod *= 1 - self.terminations[joint_option[idx]].pmf(joint_state[idx])
+		
+		return 1.0 - prod
 
-		return np.sum(out)
-
-	def one_or_more_terminate_prob(self, n_agents, terminations):
-		superset = [list(combinations(range(n_agents)))]
-		superset.remove(set())
-
-		sumtotal = 0.0
-		for item in superset:
-			product = 1.0
-			for i in item:
-				product *= terminations[item[i]]
-
-			sumtotal += product
-
-		return sumtotal
-
-	def start(self, phi, joint_option, joint_action): #Phi is a matrix, joint_option and joint_action are lists
-		self.last_Phi = phi
-		self.last_jointOption = joint_option
-		self.last_jointAction = joint_action
-
-	def update(self, phi, joint_option, joint_action, reward, done):
+	def update(self, phi, joint_option, joint_action, reward, done):	#TODO: fix this
 		# One-step update target
 		update_target = reward
 		if not done:
