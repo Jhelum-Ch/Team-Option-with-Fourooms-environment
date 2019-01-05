@@ -1,6 +1,7 @@
 import numpy as np
-from itertools import combinations
 import operator
+import itertools
+from modelConfig import params
 
 class IntraOptionQLearning:
 	def __init__(self, n_agents, discount, lr, terminations, weights):
@@ -24,10 +25,29 @@ class IntraOptionQLearning:
 		self.last_joint_option = joint_option
 		self.last_value = self.getQvalue(joint_state, joint_option)
 
-	def getQvalue(self, joint_state, joint_option=None):
+	def getQvalue(self, joint_state, joint_option=None, exclude_joint_option=None):
+		# joint_option = None converts this function to a value function
 		if joint_option is None:
-			return self.weights[joint_state]
-		return self.weights[joint_state] [joint_option]
+			# this returns the maximum value over all possible joint states
+			
+			# find all possible combination of joint options
+			all_joint_options = list(itertools.permutations(range(params['agent']['n_options']), self.n_agents))
+			
+			if not exclude_joint_option is None:
+				all_joint_options = all_joint_options.remove(exclude_joint_option)
+			
+			# calculate values for each of these joint options. One ca call getQvalue here recursively
+			all_Q = {option : self.getQvalue(joint_state, option) for option in all_joint_options}
+			
+			# return the maximum value and corresponding joint state
+			max_idx, max_value = max(all_Q.items(), key=operator.itemgetter(1))
+			
+			return max_value
+			
+			#return self.weights[joint_state]
+		
+		return sum(self.weights[joint_state][option] for option in joint_option)
+		
 	
 	def terminationProbOfAtLeastOneAgent(self, joint_state, joint_option):
 		# calculates termination probability of at least one agent
@@ -39,27 +59,30 @@ class IntraOptionQLearning:
 		return 1.0 - prod
 
 	def getAdvantage(self, joint_state, joint_option=None):
-		values = self.getQvalue(joint_state)
-		max_idx, max_value = max(values.items(), key=operator.itemgetter(1))
-		advantages = {key:val - max_value for key, val in values.items()}
+		# values = self.getQvalue(joint_state)
+		# max_idx, max_value = max(values.items(), key=operator.itemgetter(1))
+		v = self.getQvalue(joint_state)
 		if joint_option is None:
-			return advantages
-		return advantages[joint_option]
+			return v
+		q = self.getQvalue(joint_state, joint_option)
+		return q - v
+		# advantages = {key:val - max_value for key, val in values.items()}
+		# if joint_option is None:
+		# 	return advantages
+
+		# return sum(advantages[option] for option in joint_option)
 
 	def update(self, joint_state, joint_option, reward, done):
 		# One-step update target
 		update_target = reward
+		current_Q = self.getQvalue(joint_state, joint_option)
 		if not done:
-			current_values = self.getQvalue(joint_state)
-			max_current_value = max(current_values.items(), key=operator.itemgetter(1))[1]
-			#termination = self.terminations[self.last_jointOption].pmf(phi)
-
-			#modify this according to current writeup
-			one_or_more_termination_prob = self.terminationProbOfAtLeastOneAgent(joint_state, joint_option)
-			update_target += self.discount*((1.-one_or_more_termination_prob)*current_values[self.last_joint_option] +
-											one_or_more_termination_prob*max_current_value)
+			beta = self.terminationProbOfAtLeastOneAgent(joint_state, joint_option) # beta is the probability that
+			# none of the agents terminate. Hence, the current option continues.
+			update_target += self.discount*((1. - beta)*current_Q +
+											beta * self.getQvalue(joint_state, None, joint_option))
 			
-			self.last_value = current_values[joint_option]
+			self.last_value = current_Q
 			self.last_joint_option = joint_option
 			self.last_joint_state = joint_state
 
