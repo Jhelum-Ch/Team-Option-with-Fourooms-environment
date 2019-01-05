@@ -13,11 +13,10 @@ class Option:
 		
 def createOptions(env):
 	options = []
-	mu_policy = []  #pmf over options. Used in selecting options
 	for i in range(params['agent']['n_options']):
 		options.append(Option(i, SoftmaxPolicy(len(env.cell_list), len(env.agent_actions)), SigmoidTermination(len(env.cell_list))))
 		
-	#mu_policy is the policy over options
+	# mu_policy is the policy over options
 	mu_policy = SoftmaxPolicy(len(env.cell_list), params['agent']['n_options'])
 		
 	return options, mu_policy
