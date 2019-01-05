@@ -1,3 +1,5 @@
+from modelConfig import params
+
 class Broadcast:
     def __init__(self, goals, agent, optionID):
         self.goals = goals
@@ -12,7 +14,7 @@ class Broadcast:
 
 
     def randomBroadcast(self, state):
-        n = self.rng.uniform(0,1)
+        n = params['train']['seed'].uniform(0,1)
         if n < 0.1:
             return 1  # broadcast with probability 0.1
         return 0
