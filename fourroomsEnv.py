@@ -5,7 +5,6 @@ from enum import IntEnum
 from gym import core, spaces
 from gym.envs.registration import register
 from agent import Agent
-from option import Option
 import sys
 
 if sys.version_info[0] < 3:
@@ -24,7 +23,7 @@ class FourroomsMA:
         # stay = 4
 
 
-    def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty = -0.01, collision_penalty = -0.01):
+    def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty =-0.01, collision_penalty = -0.01):
         layout = """\
 wwwwwwwwwwwww
 w     w     w
