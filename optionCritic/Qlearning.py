@@ -1,119 +1,122 @@
 import numpy as np
+from itertools import combinations
+import operator
 
 class IntraOptionQLearning:
-    def __init__(self, n_agents, discount, lr, terminations, weights):
-        self.n_agents = n_agents
-        self.discount = discount
-        self.lr = lr
-        self.terminations = terminations
-        self.weights = weights
+	def __init__(self, agents, n_agents, discount, lr, terminations, weights):
 
-    def start(self, phi, joint_option): #phi is a scalar of all agents and joint_option is a list
-        self.last_phi = phi
-        self.last_jointOption = joint_option
-        self.last_value = self.value(phi, joint_option)
+		# param terminations: terminations is a list of termination objects over all the options
+		# So, it's a vector of dimension (n_options, 1) i.e. 5 x 1 for us
+		self.agents = agents	# holds agents objects
+		self.n_agents = n_agents
+		self.discount = discount
+		self.lr = lr
+		self.terminations = terminations
+		self.weights = weights	#let's assume weights are dictionary
 
-    def value(self, phi, joint_option): #Some of joint_option values could be None
-        for i in range(len(joint_option)):
-            if joint_option[i] is None:
-                out[i,:] = np.sum(self.weights[phi, :], axis=0)
-            out[i,:] = np.sum(self.weights[phi, joint_option[i]], axis=0)
+	def start(self, joint_state, joint_option):
+		'''
+		:param joint_state: tuple of state encodings. Ranges from (0, 0, 0) to (103, 103, 103)
+		:param joint_option:
+		:return:
+		'''
+		self.last_joint_state = joint_state
+		self.last_joint_option = joint_option
+		self.last_value = self.getQvalue(joint_state, joint_option)
 
-        return np.sum(out, axis=0) #add value of each agent to get total value. Returns an array for all actions
+	def getQvalue(self, joint_state, joint_option=None):
+		if joint_option is None:
+			return self.weights[joint_state]
+		return self.weights[joint_state] [joint_option]
+	
+	def terminationProbOfAtLeastOneAgent(self, joint_state_from_belief):
+		# calculates termination probability of at least one agent
+		prod = 1.0
+		for idx in range(self.n_agents):
+			prod *= 1 - self.terminations[self.agents[idx].option].pmf(joint_state_from_belief[idx])
+			
+		return 1.0 - prod
 
-    def one_or_more_terminate_prob(self, n_agents, terminations):
-        superset = [list(combinations(range(n_agents)))]
-        superset.remove(set())
+	# TODO: Double check the following function
+	def advantage(self, joint_state, joint_option=None): #Some of options values could be None
+		values = self.getQvalue(joint_state)
+		max_idx, max_value = max(values.items(), key=operator.itemgetter(1))
+		advantages = values - np.max(values)
+		for i in range(len(joint_option)):
+			if joint_option is None:
+				return advantages
+			advantages[joint_option[i]] = values[joint_option[i]] - np.max(values[joint_option[i]])
+		return advantages
 
-        sumtotal = 0.0
-        for item in superset:
-            product = 1.0
-            for i in item:
-                product *= terminations[item[i]]
+	def update(self, phi, joint_option, reward, done):
+		# One-step update target
+		update_target = reward
+		if not done:
+			current_values = self.value(phi, joint_option)
+			termination = self.terminations[self.last_jointOption].pmf(phi)
 
-            sumtotal += product
+			#modify this according to current writeup
+			one_or_more_termination_prob = self.terminationProbOfAtLeastOneAgent(self.n_agents, self.terminations)
+			update_target += self.discount*((1.-one_or_more_termination_prob)*current_values[self.last_jointOption] + one_or_more_termination_prob*np.max(current_values))
 
-        return sumtotal
+		# Dense gradient update step
+		tderror = update_target - self.last_value
+		self.weights[self.last_Phi, self.last_jointOption] += self.lr*tderror
 
-    # TODO: Double check the following function
-    def advantage(self, phi, joint_option): #Some of options values could be None
-        values = self.value(Phi, joint_option)
-        advantages = values - np.max(values)
-        for i in range(self.numAgents):
-            if joint_option[i] is None:
-                return advantages
-            advantages[joint_option[i]]
-        return
+		if not done:
+			self.last_value = current_values[joint_option]
+			self.last_jointOption = joint_option
+			self.last_Phi = phi
 
-    def update(self, phi, joint_option, reward, done):
-        # One-step update target
-        update_target = reward
-        if not done:
-            current_values = self.value(phi, joint_option)
-            termination = self.terminations[self.last_jointOption].pmf(phi)
-
-            #modify this according to current writeup
-            one_or_more_termination_prob = self.one_or_more_terminate_prob(self.n_agents, self.terminations)
-            update_target += self.discount*((1.-one_or_more_termination_prob)*current_values[self.last_jointOption] + one_or_more_termination_prob*np.max(current_values))
-
-        # Dense gradient update step
-        tderror = update_target - self.last_value
-        self.weights[self.last_Phi, self.last_jointOption] += self.lr*tderror
-
-        if not done:
-            self.last_value = current_values[joint_option]
-            self.last_jointOption = joint_option
-            self.last_Phi = phi
-
-        return update_target
+		return update_target
 
 
 class IntraOptionActionQLearning:
-    def __init__(self, n_agents, discount, lr, terminations, weights, qbigomega):
-        self.n_agents = n_agents
-        self.discount = discount
-        self.lr = lr
-        self.terminations = terminations #terminations is a list
-        self.weights = weights
-        self.qbigomega = qbigomega
+	def __init__(self, n_agents, discount, lr, terminations, weights, qbigomega):
+		self.n_agents = n_agents
+		self.discount = discount
+		self.lr = lr
+		self.terminations = terminations #terminations is a list
+		self.weights = weights
+		self.qbigomega = qbigomega
 
-    def value(self, phi, joint_option, joint_action): #Phi is a matrix, joint_option and joint_action are lists
-        out[i] = np.sum(self.weights[phi, joint_option[i], joint_action[i]], axis=0)
+	def value(self, phi, joint_option, joint_action): #Phi is a matrix, joint_option and joint_action are lists
+		out[i] = np.sum(self.weights[phi, joint_option[i], joint_action[i]], axis=0)
 
-        return np.sum(out)
+		return np.sum(out)
 
-    def one_or_more_terminate_prob(self, n_agents, terminations):
-        superset = [list(combinations(range(n_agents)))]
-        superset.remove(set())
+	def one_or_more_terminate_prob(self, n_agents, terminations):
+		superset = [list(combinations(range(n_agents)))]
+		superset.remove(set())
 
-        sumtotal = 0.0
-        for item in superset:
-            product = 1.0
-            for i in item:
-                product *= terminations[item[i]]
+		sumtotal = 0.0
+		for item in superset:
+			product = 1.0
+			for i in item:
+				product *= terminations[item[i]]
 
-            sumtotal += product
+			sumtotal += product
 
-        return sumtotal
+		return sumtotal
 
-    def start(self, phi, joint_option, joint_action): #Phi is a matrix, joint_option and joint_action are lists
-        self.last_Phi = phi
-        self.last_jointOption = joint_option
-        self.last_jointAction = joint_action
+	def start(self, phi, joint_option, joint_action): #Phi is a matrix, joint_option and joint_action are lists
+		self.last_Phi = phi
+		self.last_jointOption = joint_option
+		self.last_jointAction = joint_action
 
-    def update(self, phi, joint_option, joint_action, reward, done):
-        # One-step update target
-        update_target = reward
-        if not done:
-            current_values = self.qbigomega.value(phi)
-            termination = self.terminations[self.last_options].pmf(Phi)
-            one_or_more_termination_prob = self.one_or_more_terminate_prob(self.n_agents, self.terminations)
-            update_target += self.discount*((1.-one_or_more_termination_prob)*current_values[self.last_jointOption] + one_or_more_termination_prob*np.max(current_values))
+	def update(self, phi, joint_option, joint_action, reward, done):
+		# One-step update target
+		update_target = reward
+		if not done:
+			current_values = self.qbigomega.value(phi)
+			termination = self.terminations[self.last_options].pmf(Phi)
+			one_or_more_termination_prob = self.one_or_more_terminate_prob(self.n_agents, self.terminations)
+			update_target += self.discount*((1.-one_or_more_termination_prob)*current_values[self.last_jointOption] + one_or_more_termination_prob*np.max(current_values))
 
-        # Update values upon arrival if desired
-        tderror = update_target - self.value(self.last_Phi, self.last_jointOption, self.last_jointAction)
-        self.weights[self.last_Phi, self.last_jointOption, self.last_jointAction] += self.lr*tderror
+		# Update values upon arrival if desired
+		tderror = update_target - self.value(self.last_Phi, self.last_jointOption, self.last_jointAction)
+		self.weights[self.last_Phi, self.last_jointOption, self.last_jointAction] += self.lr*tderror
 
-        self.last_Phi = phi
-        self.last_jointOption = joint_option
-        self.last_jointAction = joint_action
+		self.last_Phi = phi
+		self.last_jointOption = joint_option
+		self.last_jointAction = joint_action
