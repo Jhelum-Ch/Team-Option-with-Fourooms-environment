@@ -8,7 +8,6 @@ class IntraOptionQLearning:
 
 		# param terminations: terminations is a list of termination objects over all the options
 		# So, it's a vector of dimension (n_options, 1) i.e. 5 x 1 for us
-		# self.agents = agents	# holds agents objects
 		self.n_agents = n_agents
 		self.discount = discount
 		self.lr = lr
@@ -32,7 +31,6 @@ class IntraOptionQLearning:
 			# this returns the maximum value over all possible joint states
 			
 			# find all possible combination of joint options
-			# all_joint_options = list(itertools.permutations(range(params['agent']['n_options']), self.n_agents))
 			all_joint_options = list(self.weights[joint_state].keys())
 			
 			if not joint_option_in_use is None:
@@ -58,18 +56,11 @@ class IntraOptionQLearning:
 		return 1.0 - prod
 
 	def getAdvantage(self, joint_state, joint_option=None):
-		# values = self.getQvalue(joint_state)
-		# max_idx, max_value = max(values.items(), key=operator.itemgetter(1))
 		v = self.getQvalue(joint_state)
 		if joint_option is None:
 			return v #TODO: check if this should be -v
 		q = self.getQvalue(joint_state, joint_option)
 		return q - v
-		# advantages = {key:val - max_value for key, val in values.items()}
-		# if joint_option is None:
-		# 	return advantages
-
-		# return sum(advantages[option] for option in joint_option)
 
 	def update(self, joint_state, joint_option, reward, done):
 		# One-step update target
