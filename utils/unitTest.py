@@ -5,7 +5,7 @@ from optionCritic.termination import SigmoidTermination
 from optionCritic.option import createOptions
 from random import shuffle
 from doc import DOC
-from optionCritic.Qlearning import IntraOptionQLearning
+from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning
 import numpy as np
 import itertools
 import random
@@ -46,49 +46,100 @@ def testActionSelection(env):
 	joint_action = doc.chooseAction()
 	doc.evaluateOption(joint_action)
 	
-def testIntraOptionQLearning(env):
+def testQ(env):
 	options, mu_policy = createOptions(env)
 	
-	#agents need to choose options
+	# agents need to choose options
 	doc = DOC(env, options, mu_policy)
 	doc.chooseOption()
 	
-	joint_options = list(itertools.permutations(range(5), 3))
-	print('permutation : ', joint_options)
-	
-	weights = dict.fromkeys(env.states_list, dict.fromkeys(joint_options, random.randint(1, 10)))
-	
+	joint_options = list(itertools.permutations(range(params['agent']['n_options']), params['env']['n_agents']))
+	joint_actions = list(itertools.product(range(4), repeat=params['env']['n_agents']))
+	# print(len(joint_actions))
 	terminations = [option.termination for option in options]
-	#print('terminations:', terminations)
+	print('terminations:', terminations)
+	
 	discount = 0.1
 	lr = 0.1
-	joint_state_from_belief = (1,2,3)
+	joint_state_from_belief = (1, 2, 3)
 	joint_state = (5, 26, 64)
 	joint_option = (4, 1, 2)
+	joint_action = (0, 0, 2)
 	
-	q = IntraOptionQLearning(len(env.agents), discount, lr, terminations, weights)
+	def testIntraOptionQLearning():
+		options, mu_policy = createOptions(env)
+		
+		#agents need to choose options
+		doc = DOC(env, options, mu_policy)
+		doc.chooseOption()
+		
+		# joint_options = list(itertools.permutations(range(5), 3))
+		print('permutation : ', joint_options)
+		
+		weights = dict.fromkeys(env.states_list, dict.fromkeys(joint_options, 10))
+		
+		# option_list = list(range(5))
+		# weights = dict.fromkeys(env.states_list, dict.fromkeys(option_list, 10))
+		print('shape of Q :', len(weights), len(weights[joint_state]))
+		
+		# print('line 1 : ', weights[(5, 26, 64)])
+		#
+		# for opt in [1, 2, 3]:
+		# 	print(weights[(5, 26, 64)][opt])
+		#
+		# print('sum of options 1, 2, 3 :', sum(weights[(5, 26, 64)][opt] for opt in (1, 2, 3)))
+		
+		# terminations = [option.termination for option in options]
+		# print('terminations:', terminations)
+		#
+		# discount = 0.1
+		# lr = 0.1
+		# joint_state_from_belief = (1,2,3)
+		# joint_state = (5, 26, 64)
+		# joint_option = (4, 1, 2)
+		
+		q = IntraOptionQLearning(len(env.agents), discount, lr, terminations, weights)
+		
+		
+		# test start()
+		q.start(joint_state, joint_option)
+		
+		# test terminationProbOfAtLeastOneAgent()
+		print('termination prob of at least one agent :', q.terminationProbOfAtLeastOneAgent(joint_state_from_belief,
+																							 joint_option))
+		
+		# test getValue()
+		print('get Q value :', q.getQvalue(joint_state, joint_option))
+		print('get Q value with option=None:', q.getQvalue(joint_state))
+		print('get V value :', q.getQvalue(joint_state, None, joint_option))
+		
+		# test getAdvantage()
+		print('advantage : ', q.getAdvantage(joint_state, joint_option))
+		print('advantage with Option=None: ', q.getAdvantage(joint_state))
+		
+		# test update
+		print('update :', q.update(joint_state, joint_option, reward=1, done=False))
+		
+		return q
+		
+	q_omega = testIntraOptionQLearning()
+		
+	def testIntraOptionActionQLearning():
+		
+		weightsQ = dict.fromkeys(env.states_list, dict.fromkeys(joint_options, dict.fromkeys(joint_actions, 10)))
+		aq = IntraOptionActionQLearning(len(env.agents), discount, lr, terminations, weightsQ, q_omega)
+		print('\nAction Q Value :', aq.getQvalue(joint_state, joint_option, joint_action))
+		aq.start(joint_state, joint_option, joint_action)
+		print('Action Q TD update :', aq.update(joint_state, joint_option, joint_action, reward=1, done=False))
+		
+	testIntraOptionActionQLearning()
+		
 	
-	
-	# test start()
-	q.start(joint_state, joint_option)
-	
-	# test terminationProbOfAtLeastOneAgent()
-	print('termination prob of at least one agent :', q.terminationProbOfAtLeastOneAgent(joint_state_from_belief,
-																						 joint_option))
-	
-	# test getValue()
-	print('get Q value :', q.getQvalue(joint_state, joint_option))
-	print('get Q value with option=None:', q.getQvalue(joint_state))
-	
-	# test getAdvantage()
-	print('advantage : ', q.getAdvantage(joint_state, joint_option))
-	print('advantage with Option=None: ', q.getAdvantage(joint_state))
-	
-	# test update
-	print('update :', q.update(joint_state, joint_option, reward=1, done=False))
-	
-def testIntraOptionActionQLearning(env):
-	
+
+
+
+
+
 	
 	
 		
