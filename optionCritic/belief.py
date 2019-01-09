@@ -1,18 +1,47 @@
 import numpy as np
 import scipy.stats
 import random
+from modelConfig import params
 
 
 class Belief:
 	def __init__(self, env, sample_count=1000):
 		super(Belief, self).__init__()
+		self.env = env.deepcopy()
+		self.sample_count = 1000
+		self.curr_joint_state = env.currstate
 		self.states_list = env.states_list
-		self.p_val = np.full(len(env.states_list), 1.0 / len(env.states_list))
-	
-	def sample(self):
-		pass
+		self.p_val = np.full(len(env.states_list))
+		self.p_val[(self.curr_joint_state)] = 1.0
+		
+	def rejectionSampling(self):
+		
+		# determine neighborhood of each agent
+		# neighborhood =  np.array((params['env']['n_agents'], params['agent']['n_actions']))
+		# for agent in range(params['env']['n_agents']):
+		# 	for action in range(params['agent']['n_actions']):
+		# 		self.env.currstate = self.curr_joint_state
+		# 		self.env.step()
+		# 		neighborhood[agent, action] = self.env.currstate[agent]
+				
+		# each agent rejects a next state based on it's own neighborhood
+		consistent = False
+		sample_count = 0
+		while consistent is False and sample_count <= self.sample_count:
+			sampled_joint_state = self.sampleJointState()
+			for agent in range(params['env']['n_agents']):
+				# TODO : check for consistency
+			
+				if not consistent:
+					consistent = False
+					break
+			sample_count += 1
+			
+		return sampled_joint_state
+				
 	
 	def sampleJointState(self):
+		# this is executed by the co-ordinator
 		sampled_state_idx = int(np.random.choice(len(self.states_list), size=1, p=self.p_val))
 		return self.states_list[sampled_state_idx]
 		#return np.random.multinomial(1, self.p_val)
