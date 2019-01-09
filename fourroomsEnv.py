@@ -56,7 +56,7 @@ wwwwwwwwwwwww
         self.occupancy = np.array([list(map(lambda c: 1 if c == 'w' else 0, line)) for line in layout.splitlines()])
 
         # create frame for RGB visualization
-        self.occupancy_visual = no.zeros((13,13,3))
+        self.occupancy_visual = np.zeros((13,13,3))
         for i in range(13):
             for j in range(13):
                 if self.occupancy[i,j] == 0:
