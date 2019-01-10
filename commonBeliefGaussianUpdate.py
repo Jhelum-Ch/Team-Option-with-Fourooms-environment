@@ -2,22 +2,63 @@ import numpy as np
 import fourroomsEnv
 import option
 import agent
-import belief
 
 
 '''This code does a Monte Carlo return with n agents with common belief estimated as mixGauss'''
 
 class MCR_Gauss(env):
     
-    def __init__(self, n_agents,  maxIter):
+    def __init__(self, n_agents, n_mean_prior, n_cov_prior, maxIter):
         self.n_agents = n_agents
-        # self.n_mean_prior = n_mean_prior
-        # self.n_cov_prior = n_cov_prior
+        self.n_mean_prior = n_mean_prior
+        self.n_cov_prior = n_cov_prior
         self.maxIter = maxIter
         super(MCR_Gauss, self).__init__()
+        
+        
+    def inverseNW(self, mean_prior, cov_prior, samples, n_sample):
+        '''Inverse Normal-Wishart for estimating multi-variate normal'''
+        '''samples is a list of lists (for multiple samples), or a list (for one sample)'''
+
+        x = np.array(samples).T #alternatively: np.transpose(samples)
+        C = np.cov(x) #sample covariance
+        barX = np.mean(x, axis = 0) #sample mean
+
+        mean_posterior = (self.n_mean_prior*mean_prior + n_sample*barX)/(self.n_mean_prior+n_sample)
+
+        Psi = self.n_cov_prior*cov_prior
+
+        inter = ((self.n_mean_prior*n_sample)/(self.n_mean_prior+n_sample))*(barX-mean_prior)*np.transpose(barX-mean_prior)
+
+        cov_posterior = C + Psi + inter
+
+        return (mean_posterior, (self.n_mean_prior+n_sample), (self.n_cov_prior+n_sample), cov_posterior)
+        
+    
+    def priors(self):
+        #randomly choose a prior mean
+        mean_prior_samples = np.random.multivariate_normal([0,0], np.eye(self.n_agents), self.n_mean_prior) #alternatively, just choose mean_prior = [0,0]
+        mean_prior = np.mean(mean_prior_samples,axis = 0)
+
+        sigma_samples = [np.random.uniform(0, 4, self.n_cov_prior) for _ in range(self.n_agents)]
+        avg_sigmas = np.mean(sigma_samples,axis = 1)
+        cov_prior = np.diag(avg_sigmas)
+        return (mean_prior, cov_prior)
     
     
-    def mc_episode(self, features, policy, n_episodes, n_steps): 
+    def gaussianUpdate(self, mean_prior, cov_prior, data):
+        (mean_posterior, n_mean_posterior, n_cov_posterior, cov_posterior) = self.inverseNW(mean_prior, cov_prior, data, 1) #update based on one sample joint-observation
+        return (mean_posterior, n_mean_posterior, n_cov_posterior, cov_posterior)
+    
+    
+    def sampleFromPosterior(self, mean_prior, cov_prior, data, n_samples):
+        return np.random.multivariate_normal(self.gaussianUpdate(mean_prior, cov_prior, data)[0], self.gaussianUpdate(mean_prior, cov_prior, data)[3], n_samples)
+
+    
+    def reward(self, joint_state, joint_action):  # dummy reward. We have to modify the environment to incorporate the reward based on the sampled next state
+        return np.linalg.norm(state)+np.linalg.norm(joint_action)
+    
+    def mc_episode(self, mean_prior, cov_prior, features, policy, n_episodes, n_steps): 
         for ep in range(n_episodes):
             episode = []
             Q_inter = defaultdict(list)
@@ -27,39 +68,33 @@ class MCR_Gauss(env):
             joint_action = [policy.sample(phi) for _ in range(self.n_agents)] 
             
             common_observation = env.get_observation(Option.broadcasts)
-            n_samples = np.shape(common_observation)[1]
 
-            joint_state = np.mean(Belief(self.n_agents, env.states_list).sample(), axis = 0) # But this might not yiels integer values
-
+            mean_prior, cov_prior = self.priors()
 
             
             for step in range(n_steps):
-                common_observation_samples = env.get_observation(Option.broadcasts)
+                common_observation = env.get_observation(Option.broadcasts)
 
-                
-                
-                common_belief_mean_posterior, common_belief_cov_posterior = Belief(self.n_agents).updateBeliefParameters(self, common_observation_samples)
+                # Note that for a given joint-action the reward, next joint-state should be coded in env.step()
+                common_belief_mean_posterior = self.gaussianUpdate(mean_prior, cov_prior, common_observation)[0]
+                common_belief_cov_posterior = self.gaussianUpdate(mean_prior, cov_prior,common_observation)[3]
 
 
+                next_joint_state = np.mean(self.sampleFromPosterior(100), axis = 0)
                 phi = features(next_joint_state)
-                joint_action = [pi_policy().sample(phi) for _ in range(self.n_agents)]
+                joint_action = [pi_policy().sample(phi) for _ in range(args.n_agents)]
+                reward = self.reward(next_joint_state, joint_action)
 
-                #reward = self.reward(next_joint_state, joint_action)
-
-                reward, done = env.step(joint_action)
-                next_joint_state = np.random.multivariate_normal(common_belief_mean_posterior, common_belief_cov_posterior, n_samples)
-
-                # samples_joint_states = np.random.multivariate_normal(mean_prior, cov_prior, 100)
-                # joint_state = np.mean(samples_joint_states, axis = 0) #sample_average for estimated joint-state
-                next_joint_state = np.mean(Belief(self.n_agents, env.states_list).sample(), axis = 0) # But this might not yiels integer values
+                samples_joint_states = np.random.multivariate_normal(mean_prior, cov_prior, 100)
+                joint_state = np.mean(samples_joint_states, axis = 0) #sample_average for estimated joint-state
 
                 episode.append([joint_state, joint_action, reward])
 
                 if done:
                     break
 
-                # mean_prior = common_belief_mean_posterior
-                # cov_prior = common_belief_cov_posterior
+                mean_prior = common_belief_mean_posterior
+                cov_prior = common_belief_cov_posterior
 
                 reward_from_episode = np.zeros([env.observation_space.n,env.action_space.n]) #target reward from episode
                 for t1 in reversed(range(len(episode))):
@@ -112,7 +147,8 @@ class SoftmaxPolicy:
     
     
 class EgreedyPolicy:
-    def __init__(self, rng, n_features, n_actions, epsilon):
+    def __init__(self, numAgents, rng, n_features, n_actions, epsilon):
+        self.numAgents = numAgents
         self.rng = rng
         self.epsilon = epsilon
         self.weights = np.zeros((n_features, n_actions))
@@ -146,9 +182,8 @@ class EgreedyPolicy:
         parser.add_argument('--n_episodes', help="Number of episodes per run", type=int, default=250)
         parser.add_argument('--n_runs', help="Number of runs", type=int, default=100)
         parser.add_argument('--n_steps', help="Maximum number of steps per episode", type=int, default=1000)
-        parser.add_argument('--n_samples', help="Number of observation samples to compute mean vector and covariance matrix of Gaussian common belief", type=int, default=1000)
-        # parser.add_argument('--n_mean_prior', help="Number of samples to compute mean vector of Gaussian common belief", type=int, default=100)
-        # parser.add_argument('--n_cov_prior', help="Number of samples to compute covariance matrix of Gaussian common belief", type=int, default=100)
+        parser.add_argument('--n_mean_prior', help="Number of samples to compute mean vector of Gaussian common belief", type=int, default=100)
+        parser.add_argument('--n_cov_prior', help="Number of samples to compute covariance matrix of Gaussian common belief", type=int, default=100)
         parser.add_argument('--temperature', help="Temperature parameter for softmax", type=float, default=1e-2)
         
         
@@ -168,11 +203,9 @@ class EgreedyPolicy:
         
         for run in range(args.n_runs):
             features = Tabular(env.observation_space.n)
-            n_features, n_actions = len(features), env.action_space.n #len(features) = 1
+            n_features, nactions = len(features), env.action_space.n #len(features) = 1
             
-            #common_belief_mean, common_belief_cov = MCR_Gauss(env, args.n_agents, maxIter).priors()
-            common_belief_mean_posterior, common_belief_cov_posterior = Belief(self.n_agents).updateBeliefParameters(self, common_observation_samples)
-
+            common_belief_mean_prior, common_belief_cov_prior = MCR_Gauss(env, args.n_agents, args.n_mean_prior, args.n_cov_prior, maxIter).priors()
             pi_policy = [SoftmaxPolicy(rng, n_features, args.n_actions) for _ in range(args.n_agents)]
             
             
