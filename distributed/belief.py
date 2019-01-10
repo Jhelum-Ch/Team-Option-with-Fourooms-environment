@@ -14,7 +14,7 @@ class MultinomialDirichletBelief:
         self.env = copy.deepcopy(env)
         #self.env = env.deepcopy()
         self.joint_observation = joint_observation
-        self.sample_count = sample_count
+        self.sample_count = sample_count # sample_count is for rejection sampling
         self.curr_joint_state = self.env.currstate
         self.states_list = self.env.states_list
         
