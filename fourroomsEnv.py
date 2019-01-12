@@ -4,7 +4,7 @@ from collections import Counter
 from enum import IntEnum
 from gym import core, spaces
 from gym.envs.registration import register
-from agent import Agent
+from fourroomsEnv.agent import Agent
 from option import Option
 import sys
 
@@ -245,9 +245,9 @@ wwwwwwwwwwwww
         return y_list
 
 
-register(
-    id='FourroomsMA-v0',
-    entry_point='fourroomsMA:FourroomsMA',
-    timestep_limit=20000,
-    reward_threshold=1,  # should we modify this?
-)
+# register(
+#     id='FourroomsMA-v0',
+#     entry_point='fourroomsEnv:FourroomsMA',
+#     timestep_limit=20000,
+#     reward_threshold=1,  # should we modify this?
+# )
