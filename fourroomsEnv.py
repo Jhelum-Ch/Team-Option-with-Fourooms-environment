@@ -16,7 +16,7 @@ if sys.version_info[0] < 3:
 # Size in pixels of a cell in the full-scale human view
 CELL_PIXELS = 32
 
-class FourroomsMA(core.Env):
+class FourroomsMA(gym.Env):
 
     # Defines the atomic actions for the agents
     class Actions(IntEnum):
@@ -49,6 +49,14 @@ wwwwwwwwwwwww
         self.goal_reward = goal_reward
         self.broadcast_penalty = broadcast_penalty
         self.collision_penalty = collision_penalty
+
+        # Action enumeration for this environment
+        self.actions = FourroomsMA.Actions
+
+        # Actions are discrete integer values
+        self.action_space = spaces.Discrete(len(self.actions))
+
+        self.step_count = 0
 
         # create occupancy matrix.
         # 0 : free cell
@@ -142,6 +150,9 @@ wwwwwwwwwwwww
 
     # reset the world with multiple agents
     def reset(self):
+
+        self.step_count = 0
+
         # Sample initial joint state (s_0,...,s_n) without collision
         initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
         for i in range(self.n_agents):
@@ -172,65 +183,68 @@ wwwwwwwwwwwww
 
         # Process movement based on real states (not belief)
 
-        # If all goals were discovered, end episode
-        done = self.discovered_goals == self.goals
-
         rewards = [0] * self.n_agents
 
         reward = 0
 
-        if not done:
+        nextcells = [None] * self.n_agents
+        rand_nums = self.rng.uniform(size=self.n_agents)
 
-            nextcells = [None] * self.n_agents
-            rand_nums = self.rng.uniform(size=self.n_agents)
+        for i in range(self.n_agents):
 
-            for i in range(self.n_agents):
+            currcell = self.tocellcoord[self.agents[i].state]
+            act = actions[i]
+            direction = self.directions[act]
 
-                currcell = self.tocellcoord[self.agents[i].state]
-                act = actions[i]
-                direction = self.directions[act]
-
-                if rand_nums[i] > 1/3:  # pick action as intended
-                    if self.occupancy[tuple(currcell + direction)] == 0:
-                        nextcells[i] = self.tocellnum[tuple(currcell+direction)]
-                    else:
-                        nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
-                        # rewards[i] += self.collision_penalty
-
-                else:   # pick random action, except one initially intended
-                    adj_cells = self.adjacent_to(currcell)      # returns list of tuples
-                    adj_cells.remove(tuple(currcell+direction))
-
-                    index = self.rng.choice(range(len(adj_cells)))
-                    new_cell = adj_cells[i]
-
-                    if self.occupancy[new_cell] == 0:
-                        nextcells[i] = self.tocellnum[new_cell]
-                    else:
-                        nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
-                        # rewards[i] += self.collision_penalty
-
-            # check for inter-agent collisions:
-            collisions = [c for c, count in Counter(nextcells).items() if count > 1]
-            while(len(collisions) != 0):        # While loop needed to handle edge cases
-                for i in range(len(nextcells)):
-                    if nextcells[i] in collisions:
-                        nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
-
-                collisions = [c for c, count in Counter(nextcells).items() if count > 1]
-
-            for i in range(self.n_agents):
-                if nextcells[i] == self.agents[i].state:    # A collision happened for this agent
-                    rewards[i] += self.collision_penalty
+            if rand_nums[i] > 1/3:  # pick action as intended
+                if self.occupancy[tuple(currcell + direction)] == 0:
+                    nextcells[i] = self.tocellnum[tuple(currcell+direction)]
                 else:
-                    s = nextcells[i]                        # movement is valid
-                    self.agents[i].state = s
-                    if s in self.goals and s not in self.discovered_goals:
-                        rewards[i] += self.goal_reward
+                    nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
+                    # rewards[i] += self.collision_penalty
 
-            self.currstate = tuple(nextcells)
+            else:   # pick random action, except one initially intended
+                adj_cells = self.adjacent_to(currcell)      # returns list of tuples
+                adj_cells.remove(tuple(currcell+direction))
 
-            reward = np.sum(rewards)
+                index = self.rng.choice(range(len(adj_cells)))
+                new_cell = adj_cells[i]
+
+                if self.occupancy[new_cell] == 0:
+                    nextcells[i] = self.tocellnum[new_cell]
+                else:
+                    nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
+                    # rewards[i] += self.collision_penalty
+
+        # check for inter-agent collisions:
+        collisions = [c for c, count in Counter(nextcells).items() if count > 1]
+        while(len(collisions) != 0):        # While loop needed to handle edge cases
+            for i in range(len(nextcells)):
+                if nextcells[i] in collisions:
+                    nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
+
+            collisions = [c for c, count in Counter(nextcells).items() if count > 1]
+
+        for i in range(self.n_agents):
+            if nextcells[i] == self.agents[i].state:    # A collision happened for this agent
+                rewards[i] += self.collision_penalty
+            else:
+                s = nextcells[i]                        # movement is valid
+                self.agents[i].state = s
+                if s in self.goals and s not in self.discovered_goals:
+                    # new goal discovered
+                    rewards[i] += self.goal_reward
+                    self.discovered_goals.append(s)
+
+
+        self.currstate = tuple(nextcells)
+
+        reward = np.sum(rewards)
+
+        self.step_count += 1
+
+        # If all goals were discovered, end episode
+        done = len(self.discovered_goals) == len(self.goals)
 
         return reward, done, None      # Observations are not returned; they need to be queried with broadcasts
 
@@ -377,8 +391,8 @@ wwwwwwwwwwwww
 
         grid = self.encode()
 
-        for j in range(0, self.height):
-            for i in range(0, self.width):
+        for j in range(0, self.width):
+            for i in range(0, self.height):
                 cell = grid[i,j]
                 if cell == 0:
                     continue
@@ -414,7 +428,7 @@ wwwwwwwwwwwww
         if not discovered:
             c = np.array([0, 255, 0])       # Bright green
         else:
-            c = np.array([0, 150, 0])       # Dull green
+            c = np.array([0, 100, 0])       # Dull green
 
         r.setLineColor(c[0], c[1], c[2])
         r.setColor(c[0], c[1], c[2])
