@@ -21,6 +21,7 @@ def main():
 
     # Load the gym environment
     env = gym.make(options.env_name)
+    env = env.unwrapped
 
     def resetEnv():
         env.reset()
@@ -58,7 +59,7 @@ def main():
 
         reward, done, info = env.step([action]*env.n_agents)
 
-        print('step=%s, reward=%.2f' % (env.step_count, reward[0]))
+        print('step=%s, reward=%.2f' % (env.step_count, reward))
 
         if done:
             print('done!')
