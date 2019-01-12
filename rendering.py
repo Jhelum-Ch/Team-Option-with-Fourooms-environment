@@ -13,7 +13,7 @@ class Window(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle('MiniGrid Gym Environment')
+        self.setWindowTitle('FourRooms Gym Environment')
 
         self.imgLabel = QLabel()
         self.imgLabel.setFrameStyle(QFrame.Panel | QFrame.Sunken)

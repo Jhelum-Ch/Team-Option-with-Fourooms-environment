@@ -2,13 +2,11 @@
 
 from __future__ import division, print_function
 
-import sys
-import numpy
 import gym
 import time
 from optparse import OptionParser
 
-import gym_minigrid
+from fourroomsEnv import *
 
 def main():
     parser = OptionParser()
@@ -17,7 +15,7 @@ def main():
         "--env-name",
         dest="env_name",
         help="gym environment to load",
-        default='MiniGrid-Orchard-v0'
+        default='FourroomsMA-v0'
     )
     (options, args) = parser.parse_args()
 
@@ -45,32 +43,20 @@ def main():
         action = 0
 
         if keyName == 'LEFT':
-            action = env.actions.move_left
+            action = env.actions.left
         elif keyName == 'RIGHT':
-            action = env.actions.move_right
+            action = env.actions.right
         elif keyName == 'UP':
-            action = env.actions.move_forward
+            action = env.actions.up
         elif keyName == 'DOWN':
-            action = env.actions.move_backward
-
-        elif keyName == 'RETURN':
-            action = env.actions.turn_left
-        elif keyName == 'CTRL':
-            action = env.actions.turn_right
+            action = env.actions.down
         elif keyName == 'PAGE_DOWN':
             action = env.actions.stay
-
-        elif keyName == 'SPACE':
-            action = env.actions.fire
-
-        elif keyName == 'ALT' and env.gift_enabled:
-            action = env.actions.gift_reward
-
         else:
             print("unknown key %s" % keyName)
             return
 
-        obs, reward, done, info = env.step([action]*env.n_agents)
+        reward, done, info = env.step([action]*env.n_agents)
 
         print('step=%s, reward=%.2f' % (env.step_count, reward[0]))
 
