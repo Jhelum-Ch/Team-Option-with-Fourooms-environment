@@ -297,8 +297,8 @@ wwwwwwwwwwwww
 
         if self.grid_render is None:
             self.grid_render = Renderer(
-                self.grid_size * CELL_PIXELS,
-                self.grid_size * CELL_PIXELS,
+                self.width * CELL_PIXELS,
+                self.height * CELL_PIXELS,
                 True if mode == 'human' else False
             )
 
@@ -335,7 +335,7 @@ wwwwwwwwwwwww
         return r
 
 
-    def _gen_grid(self, r, tile_size):
+    def _render_grid(self, r, tile_size):
         """
         Render this grid at a given scale
         :param r: target renderer object
@@ -390,7 +390,7 @@ wwwwwwwwwwwww
                 elif cell == 10 or cell == 12:
                     self._render_goal(r, discovered=True)
                 elif cell == 100 or cell == 102:
-                    self._render_goal(r, discovered = False)
+                    self._render_goal(r, discovered=False)
                 r.pop()
 
         r.pop()
@@ -409,6 +409,7 @@ wwwwwwwwwwwww
             (0          ,           0)
         ])
 
+    @staticmethod
     def _render_goal(r, discovered=False):
         if not discovered:
             c = np.array([0, 255, 0])       # Bright green
