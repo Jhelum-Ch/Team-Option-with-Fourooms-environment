@@ -85,3 +85,7 @@ class DOC:
         if baseline:
             critic_feedback -= critic.value(joint_state, joint_option)
         return critic_feedback
+
+
+    # def improveOption(self, intra_option_policy_improvement, termination_improvement, joint_state, joint_option, joint_action, critic_feedback):
+    #     return intra_option_policy_improvement.update(joint_state, joint_action, critic_feedback), termination_improvement.update(joint_state, joint_option)
