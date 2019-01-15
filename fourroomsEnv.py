@@ -27,7 +27,6 @@ class FourroomsMA(gym.Env):
         right = 3
         # stay = 4
 
-
     def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty = -0.01, collision_penalty = -0.01):
         layout = """\
 wwwwwwwwwwwww
@@ -107,6 +106,7 @@ wwwwwwwwwwwww
                             if len(s) == len(np.unique(s))]
 
         self.goals = [50, 62, 71, 98, 103]  # fixed goals
+
         self.goals.sort()                   # important if not already sorted in line above
         self.discovered_goals = []
         self.init_states = self.cell_list.copy()   # initial agent states
@@ -208,7 +208,7 @@ wwwwwwwwwwwww
                 adj_cells.remove(tuple(currcell+direction))
 
                 index = self.rng.choice(range(len(adj_cells)))
-                new_cell = adj_cells[i]
+                new_cell = adj_cells[index]
 
                 if self.occupancy[new_cell] == 0:
                     nextcells[i] = self.tocellnum[new_cell]
@@ -331,13 +331,14 @@ wwwwwwwwwwwww
             # Draw the agent
             r.push()
             r.translate(
-                CELL_PIXELS * (loc[0] + 0.5),
-                CELL_PIXELS * (loc[1] + 0.5)
+                CELL_PIXELS * (loc[1] + 0.5),
+                CELL_PIXELS * (loc[0] + 0.5)
             )
             r.setLineColor(255, 0, 0)
             r.setColor(255, 0, 0)
             r.drawCircle(0,0,12)
             r.pop()
+
 
         r.endFrame()
 
@@ -398,7 +399,7 @@ wwwwwwwwwwwww
                     continue
 
                 r.push()
-                r.translate(i * CELL_PIXELS, j * CELL_PIXELS)
+                r.translate(j * CELL_PIXELS, i * CELL_PIXELS)
                 if cell == 1:
                     self._render_wall(r)
                 elif cell == 10 or cell == 12:
