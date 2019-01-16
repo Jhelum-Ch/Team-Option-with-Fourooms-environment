@@ -3,7 +3,7 @@ from scipy.misc import logsumexp
 from modelConfig import params
 
 
-class SoftmaxPolicy:
+class SoftmaxOptionPolicy:
 	def __init__(self, weights, temp=params['policy']['temperature']):
 		'''
 		:param temp: lower temperature means uniform distribution, higher means delta
@@ -47,9 +47,45 @@ class SoftmaxPolicy:
 		return pmf
 	
 	def sample(self, joint_state):
+		#TODO: fix for option selection for individual agent
 		joint_option = []
 		for agent_state in joint_state:
 			sample_option = int(self.rng.choice(range(params['agent']['n_options']), p=self.pmf(agent_state)))
 			joint_option.append(sample_option)
 			#TODO : make the sampled option unavailable
 		return tuple(joint_option)
+	
+	
+	
+class SoftmaxActionPolicy:
+	def __init__(self, n_states, n_choices, temp=params['policy']['temperature']):
+		'''
+
+		:param n_states: number of encoded individual states
+		:param n_choices: choices over which pmf spreads choice can be either number of primitive actions or options
+		:param temp: lower temperature means uniform distribution, higher means delta
+		'''
+		self.rng = params['train']['seed']
+		self.weights = np.zeros((n_states, n_choices))  # we assume that n_features and
+		# n_actions for all agents are same
+		self.temp = temp
+	
+	def value(self, phi, action=None):
+		'''
+		:param phi: state of the agent. Ranges from 1 to 103 (excluding walls)
+		:param action:
+		:return:
+		'''
+		if action is None:
+			value = np.sum(self.weights[phi, :], axis=0)
+		value = np.sum(self.weights[phi, action], axis=0)
+		return value
+	
+	def pmf(self, phi):
+		v = self.value(phi) / self.temp
+		pmf = np.exp(v - logsumexp(v))
+		return pmf
+	
+	def sample(self, phi):
+		sample_action = int(self.rng.choice(self.weights.shape[1], p=self.pmf(phi)))
+		return sample_action
