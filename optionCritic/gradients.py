@@ -34,17 +34,18 @@ class TerminationGradient:
         self.critic = critic
         self.lr = lr
 
-    def update(self, phi, joint_option): #use joint-state in place of phi
+    def update(self, agentID, joint_state, joint_option): #use joint-state in place of phi
+        phi = joint_state[agentID]
         magnitudes, directions = self.termination.grad(phi)
         self.termination.weights[directions] -= \
-                self.lr*magnitudes*(self.critic.advantage(phi, joint_option))
+                self.lr*magnitudes*(self.critic.getAdvantage(joint_state, joint_option))
 # Check this
 class IntraOptionGradient:
     def __init__(self, pi_policy, lr):
         self.lr = lr
         self.pi_policy = pi_policy
 
-    def update(self, phi, joint_action, critic): #use joint-state in place of phi
-        joint_actionPmf = self.pi_policy.pmf(phi)
-        self.pi_policy.weights[phi, :] -= self.lr*critic*joint_actionPmf
-        self.pi_policy.weights[phi, joint_action] += self.lr*critic
+    def update(self, phi, agent_action, critic): # phi is agent_state
+        agent_actionPmf = self.pi_policy.pmf(phi)
+        self.pi_policy.weights[phi, :] -= self.lr*critic*agent_actionPmf
+        self.pi_policy.weights[phi, agent_action] += self.lr*critic

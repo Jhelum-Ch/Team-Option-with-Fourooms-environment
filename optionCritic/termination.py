@@ -16,7 +16,7 @@ class SigmoidTermination:
         sample_terminate = int(self.rng.uniform() < self.pmf(phi))
         return sample_terminate
 
-    def grad(self, phi): # Check this formula
+    def grad(self, phi): # phi is agent_state
         terminate = self.pmf(phi)
         return terminate*(1. - terminate), phi
 
