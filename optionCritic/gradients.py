@@ -8,10 +8,11 @@ class TerminationGradient:
         self.critic = critic
         self.lr = lr
 
-    def update(self, phi, joint_option):
-        magnitudes, directions = self.terminations[joint_option].grad(phi)
-        self.terminations[joint_option].weights[directions] -= \
-                self.lr*magnitudes*(self.critic.advantage(phi, joint_option))
+    def update(self, joint_state, joint_option):
+        for option in joint_option:
+            magnitudes, directions = self.terminations[option].grad(joint_state)
+            self.terminations[option].weights[directions] -= \
+                    self.lr*magnitudes*(self.critic.getAdvantage(joint_state, joint_option))
 
 
 
@@ -21,7 +22,7 @@ class IntraOptionGradient:
         self.lr = lr
         self.pi_policies = pi_policies
 
-    def update(self, phi, joint_option, joint_action, critic):
-        joint_actionPmf = self.pi_policies[joint_option].pmf(Phi)
+    def update(self, joint_state, joint_option, joint_action, critic):
+        joint_actionPmf = self.pi_policies[joint_option].pmf(joint_state)
         self.pi_policies[joint_option].weights[phi, :] -= self.lr*critic*joint_actionPmf
         self.pi_policies[joint_option].weights[phi, joint_action] += self.lr*critic

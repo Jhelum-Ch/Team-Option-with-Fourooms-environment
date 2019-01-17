@@ -14,35 +14,32 @@ class DOC:
 		self.env = env
 		self.options = options
 		
-		'''
-		2. Start with initial common belief b_0
-		'''
 		# set initial belief
-		self.b0 = Belief(env)
+		self.belief = Belief(env)
 	
-		'''
-		3. Sample a joint state s := vec(s_1,...,s_n) according to b_0
-		'''
-		self.s = self.b0.sampleJointState()
+		# Sample a joint state s := vec(s_1,...,s_n) according to belief
+		self.state = self.belief.sampleJointState()
 		
 		# policy over options
 		self.mu_policy = mu_policy
 		
 	def chooseOption(self):
+		#TODO: this module needs to be chnaged, since options are chosen as per spftmax policy
 		# Choose joint-option o based on softmax option-policy
 		
 		#select agents randomly to pick options
 		agent_order = [agent.ID for agent in self.env.agents]
 		shuffle(agent_order)
-		print('agent order :', agent_order)
+		# print('agent order :', agent_order)
 		
+		joint_option = []
 		#let agents select options from available option pool
 		for agent in agent_order:
 			option_mask = [not(option.available) for option in self.options]
 			# print(option_mask)
 			
 			# pmf = [0, 0, 0.7, 0.1, 0.2]
-			pmf = self.mu_policy.pmf(self.s[agent])
+			pmf = self.mu_policy.pmf(self.state[agent])
 			pmf = np.ma.masked_array(pmf, option_mask)
 			# print('pmf : ', pmf)
 			
@@ -55,6 +52,10 @@ class DOC:
 			#remove the selected option from available option pool by setting availability to False
 			self.options[selected_option_idx].available = False
 			
+			joint_option.append(selected_option_idx)
+			
+		return tuple(joint_option)
+			
 	def chooseAction(self):
 		joint_action = []
 		for agent in self.env.agents:
@@ -62,12 +63,21 @@ class DOC:
 			print('agent ID:', agent.ID, 'state:', agent.state, 'option ID:', agent.option, 'action:', action)
 			joint_action.append(action)
 			
-		return joint_action
+		return tuple(joint_action)
 	
-	def evaluateOption(self, joint_action):
+	def evaluateOption(self, joint_state, joint_action):
 		reward, done, _ = self.env.step(joint_action)
 		print(reward, done)
-		pass
+		
+		# run critic to calculate Q value
+	
+		# decide to broadcast, based on Q value
+	
+		# get joint observation y'
+	
+		# update belief, based on y' : update self.belief
+	
+		# sample joint state based on y' : update self.state
 			
 		
 	

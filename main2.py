@@ -3,10 +3,8 @@ Skeleton Main code to meant to run the workflow. Incomplete in that it lacks ele
 """
 
 import argparse
-import random
 
 #import dill
-import gym
 import numpy as np
 
 from optionCritic.gradients import IntraOptionGradient, TerminationGradient
@@ -14,13 +12,10 @@ from optionCritic.policies import SoftmaxPolicy, FixedActionPolicies
 from optionCritic.termination import SigmoidTermination, OneStepTermination
 from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning
 
-from distributed.broadcast import Broadcast
+from optionCritic.broadcast import Broadcast
 from distributed.belief import Belief
 
-from conjugate_prior.conjugate_prior.dirichlet import DirichletMultinomial
-
 from option import Option
-from agent import Agent
 from fourroomsEnv import FourroomsMA
 
 
