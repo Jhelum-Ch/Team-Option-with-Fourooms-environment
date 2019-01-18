@@ -8,6 +8,9 @@ from gym import core, spaces
 from gym.envs.registration import register
 from agent import Agent
 from option import Option
+from modelConfig import params
+from optionCritic.Qlearning import IntraOptionQLearning
+import copy
 import sys
 
 if sys.version_info[0] < 3:
@@ -282,7 +285,8 @@ wwwwwwwwwwwww
             neighbouring_cell = self.tocellnum[tuple(currcell+direction)]
 
             return neighbouring_cell
-    
+
+
 
     # get the list of common observation, y_list, based on the broadcast action of each agent
     def get_observation(self, broadcasts):

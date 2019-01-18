@@ -1,8 +1,10 @@
-from optionCritic.qlearning import IntraOptionQLearning, IntraOptionActionQLearning
+from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning
 
-from belief import MultinomialDirichletBelief
+from distributed.belief import MultinomialDirichletBelief
+from distributed.broadcast import Broadcast
 from random import shuffle
 import numpy as np
+
 
 class DOC:
     def __init__(self, env, options, mu_policy):
@@ -20,17 +22,21 @@ class DOC:
         2. Start with initial common belief b_0
         '''
         # set initial belief
-        initial_joint_observation = params['env']['initial_joint_observation']
-        self.b0 = MultinomialDirichletBelief(env, initial_joint_observation)
+        initial_joint_observation = params['env']['initial_joint_state']
+        self.b = MultinomialDirichletBelief(env, initial_joint_observation)
         #self.b0 = Belief(env)
 
         '''
         3. Sample a joint state s := vec(s_1,...,s_n) according to b_0
         '''
-        self.s = self.b0.sampleJointState()
+        self.s = self.b.sampleJointState()
 
         # policy over options
         self.mu_policy = mu_policy
+
+        self.o = self.chooseOption()
+        self.a = self.chooseAction()
+
         
     def chooseOption(self):
         # Choose joint-option o based on softmax option-policy
@@ -68,24 +74,34 @@ class DOC:
 
         return joint_action
 
+
  
 
-    def evaluateOption(self, critic, action_critic, joint_state, joint_option, joint_action, baseline=False):
-        critic.start(joint_state, joint_option)
-        action_critic.start(joint_state, joint_option, joint_action)
+    def evaluateOption(self, critic, action_critic, terminations, baseline=False):
+        # critic.start(joint_state, joint_option)
+        # action_critic.start(joint_state, joint_option, joint_action)
         
-        reward, next_joint_state, done, _ = self.env.step(joint_action)
+        reward, next_true_joint_state, done, _ = self.env.step(joint_action)
+
+        broadcasts = Broadcast(self.env, next_true_joint_state, self.s, self.o, terminations)
+
+        #broadcasts = self.env.broadcast(reward, next_true_joint_state, self.s, self.o, terminations)
+        joint_observation = self.env.get_observation(broadcasts)
+
+        self.b = MultinomialDirichletBelief(self.env, joint_observation)
+        self.s = self.b.sampleJointState()
 
         # Critic update
-        update_target = critic.update(joint_state, joint_option, reward, done)
-        action_critic.update(joint_state, joint_option, joint_action, reward, done)
+        update_target = critic.update(self.s, self.o, reward, done)
+        action_critic.update(self.s, self.o, self.a, reward, done)
 
-        critic_feedback = action_critic.getQvalue(joint_state, joint_option, joint_action)  #Q(s,o,a)
+
+        critic_feedback = action_critic.getQvalue(self.s, self.o, self.a)  #Q(s,o,a)
 
         if baseline:
-            critic_feedback -= critic.value(joint_state, joint_option)
+            critic_feedback -= critic.value(self.s, self.o)
         return critic_feedback
 
 
-    def improveOption_of_agent(self, agentID, intra_option_policy_improvement, termination_improvement, joint_state, joint_option, joint_action, critic_feedback):
-        return intra_option_policy_improvement.update(agent_state, agent_action, critic_feedback), termination_improvement.update(agentID, joint_state, joint_option)
+    def improveOption_of_agent(self, agentID, intra_option_policy_improvement, termination_improvement, critic_feedback):
+        return intra_option_policy_improvement.update(agent_state, agent_action, critic_feedback), termination_improvement.update(agentID, self.s, self.o)

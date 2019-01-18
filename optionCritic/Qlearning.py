@@ -80,10 +80,10 @@ class IntraOptionQLearning:
 		q = self.getQvalue(joint_state, joint_option)
 		return q - v
 
-	def update(self, joint_state, joint_option, reward, done):
+	def update(self, joint_state, joint_option, reward, done): #joint-state is a consistent sample from common-belief
 		# One-step update target
 		update_target = reward	#delta
-		current_Q = self.getQvalue(joint_state, joint_option)
+		current_Q = self.getQvalue(joint_state, joint_option) 
 		if not done:
 			beta = self.terminationProbOfAtLeastOneAgent(joint_state, joint_option) # (1 - beta) is the probability
 			# that none of the agents terminate. Hence, the current option continues.

@@ -4,7 +4,7 @@ from modelConfig import params
 from optionCritic.option import Option, createOptions
 from optionCritic.policies import SoftmaxOptionPolicy, SoftmaxActionPolicy
 from optionCritic.termination import SigmoidTermination
-from optionCritic.qlearning import IntraOptionQLearning, IntraOptionActionQLearning
+from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning
 import optionCritic.gradients as grads
 
 env = FourroomsMA()
