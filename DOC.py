@@ -19,7 +19,7 @@ class DOC:
         self.options = options
     
         '''
-        2. Start with initial common belief b_0
+        2. Start with initial common belief b
         '''
         # set initial belief
         initial_joint_observation = params['env']['initial_joint_state']
@@ -70,6 +70,7 @@ class DOC:
         for agent in self.env.agents:
             action = self.options[agent.option].policy.sample(agent.state)
             print('agent ID:', agent.ID, 'state:', agent.state, 'option ID:', agent.option, 'action:', action)
+            agent.action = action
             joint_action.append(action)
 
         return joint_action
