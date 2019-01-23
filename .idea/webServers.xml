@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="2501bc89-bb42-4d12-ae32-2f57f50e5a7a" name="sbasu11@agent-9.cs.mcgill.ca:22" url="http:///">
+        <fileTransfer host="agent-9.cs.mcgill.ca" port="22" accessType="SFTP">
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
