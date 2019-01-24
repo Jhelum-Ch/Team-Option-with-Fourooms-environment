@@ -24,7 +24,6 @@ class DOC:
 		self.mu_policy = mu_policy
 		
 	def chooseOption(self):
-		#TODO: this module needs to be chnaged, since options are chosen as per spftmax policy
 		# Choose joint-option o based on softmax option-policy
 		
 		joint_option = self.mu_policy.sample(self.joint_state)
