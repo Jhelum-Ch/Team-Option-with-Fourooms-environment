@@ -1,4 +1,3 @@
-from option import Option
 
 # Agent for the FourRooms environment
 

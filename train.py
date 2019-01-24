@@ -11,10 +11,6 @@ class Trainer:
 	def __init__(self, env):
 		self.env = env
 		self.n_agents = params['env']['n_agents']
-		
-		# create option pool
-		self.options, self.mu_policy = createOptions(self.env)
-		self.terminations = [option.termination for option in self.options]
 	
 	def train(self):
 		for _ in range(params['train']['n_epochs']):
@@ -23,17 +19,22 @@ class Trainer:
 	def trainEpisode(self):
 		
 		for _ in range(params['train']['n_episodes']):
+			# create option pool
+			options, mu_policy = createOptions(self.env)
+			
+			terminations = [option.termination for option in options]
+			
 			# a. Start with an initial common belief b0
 			# c. Sample a joint-states:= (s1,...,sn) according to b0
-			doc = DOC(self.env, self.options, self.mu_policy)
+			doc = DOC(self.env, options, mu_policy)
 			
 			# d. Choose joint-option o based on softmax option-policy mu
 			joint_option = doc.chooseOption()
 			
 			critic = IntraOptionQLearning(discount= params['train']['discount'],
 										  lr= params['train']['lr_critic'],
-										  terminations= self.terminations,
-										  self.mu_policy.weights)
+										  terminations= terminations,
+										  weights= mu_policy.weights)
 			
 			
 			done = False

@@ -14,16 +14,12 @@ import operator
 
 def testCreateOption(env):
 	options, mu_policy = createOptions(env)
-	print(mu_policy.sample((30,)))
-	
-	
-	# print('policy over options :')
-	# for state in env.cell_list:
-	# 	print(mu_policy.pmf(state))
-	#
-	# for option in options:
-	# 	for state in env.cell_list:
-	# 		print(option.optionID, state, option.policy.pmf(state), option.termination.pmf(state))
+	print(len(mu_policy.weights))
+	joint_state = (5, 26, 64)
+	mu_policy.weights[joint_state][(1,2,3)] = 10
+	mu_policy.weights[joint_state][(0,3,4)] = 9
+	print(mu_policy.weights[joint_state])
+	print(mu_policy.sample(joint_state))
 			
 def testSigmoidTermination(env):
 	term = SigmoidTermination(env)
