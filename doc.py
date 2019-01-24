@@ -25,8 +25,9 @@ class DOC:
 		
 	def chooseOption(self):
 		# Choose joint-option o based on softmax option-policy
+		joint_state = tuple(np.sort(self.joint_state))
 		
-		joint_option = self.mu_policy.sample(self.joint_state)
+		joint_option = self.mu_policy.sample(joint_state)
 		
 		for option in self.options:
 			option.available = True
