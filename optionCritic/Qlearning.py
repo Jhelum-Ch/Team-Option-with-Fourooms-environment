@@ -4,7 +4,7 @@ import itertools
 from modelConfig import params
 
 class IntraOptionQLearning:
-	def __init__(self, discount, lr, terminations):
+	def __init__(self, discount, lr, terminations, weights):
 
 		# param terminations: terminations is a list of termination objects over all the options
 		# So, it's a vector of dimension (n_options, 1) i.e. 5 x 1 for us
@@ -12,7 +12,7 @@ class IntraOptionQLearning:
 		self.discount = discount
 		self.lr = lr
 		self.terminations = terminations
-		self.weights = {}	#let's assume weights are dictionary
+		self.weights = weights	#let's assume weights are dictionary
 
 	def start(self, joint_state, joint_option):
 		'''
