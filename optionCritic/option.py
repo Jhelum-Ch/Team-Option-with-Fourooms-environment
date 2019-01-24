@@ -14,9 +14,15 @@ class Option:
 		self.available = True
 		
 def createOptions(env):
+	'''
+	:param env:
+	:return:
+		options : list of option objects
+		mu_policy = Softmax option policy object
+	'''
 	joint_state_list = set([tuple(np.sort(s)) for s in env.states_list])
-	joint_option_list = list(itertools.permutations(range(params['agent']['n_options']), params['env']['n_agents']))
-	joint_action_list = list(itertools.product(range(len(env.agent_actions)), repeat=params['env']['n_agents']))
+	all_joint_options =  list(itertools.permutations(range(params['agent']['n_options']), params['env']['n_agents']))
+	joint_option_list = set([tuple(np.sort(jo)) for jo in all_joint_options])
 	
 	# mu_policy is the policy over options
 	mu_weights = dict.fromkeys(joint_state_list, dict.fromkeys(joint_option_list, 0))
