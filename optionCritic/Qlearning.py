@@ -4,7 +4,7 @@ import itertools
 from modelConfig import params
 
 class IntraOptionQLearning:
-	def __init__(self, discount, lr, terminations):
+	def __init__(self, discount, lr, terminations, weights):
 
 		# param terminations: terminations is a list of termination objects over all the options
 		# So, it's a vector of dimension (n_options, 1) i.e. 5 x 1 for us
@@ -12,7 +12,7 @@ class IntraOptionQLearning:
 		self.discount = discount
 		self.lr = lr
 		self.terminations = terminations
-		self.weights = {}	#let's assume weights are dictionary
+		self.weights = weights	#let's assume weights are dictionary
 
 	def start(self, joint_state, joint_option):
 		'''
@@ -35,9 +35,6 @@ class IntraOptionQLearning:
 			self.weights[joint_state] = {}
 			if joint_option:
 				self.weights[joint_state][joint_option] = 0.0
-		else:
-			if joint_option:
-				self.weights[joint_state][joint_option] = 0.0
 			
 		if joint_option is None:
 			# this returns the maximum value over all possible joint states
@@ -45,18 +42,11 @@ class IntraOptionQLearning:
 			# find all possible combination of joint options
 			all_joint_options = list(self.weights[joint_state].keys())
 			
-			
 			if joint_option_in_use:
-				
-				# the first time all_joint_options might not contain joint_option_in_use 
-				if joint_option_in_use in all_joint_options:
-					# to avoid empty all_joint_options
-					if len(all_joint_options)>1:
-						all_joint_options.remove(joint_option_in_use)
+				all_joint_options.remove(joint_option_in_use)
 			
 			# calculate values for each of these joint options. One can call getQvalue here recursively
 			all_Q = {option : self.getQvalue(joint_state, option) for option in all_joint_options}
-			
 			
 			# return the maximum value and corresponding joint state
 			max_idx, max_value = max(all_Q.items(), key=operator.itemgetter(1))
@@ -69,7 +59,7 @@ class IntraOptionQLearning:
 		# calculates termination probability of at least one agent
 		prod = 1.0
 		for idx in range(len(joint_state)):
-			prod *= 1.0 - self.terminations[joint_option[idx]].pmf(joint_state[idx])
+			prod *= 1 - self.terminations[joint_option[idx]].pmf(joint_state[idx])
 			
 		return 1.0 - prod
 
@@ -80,10 +70,10 @@ class IntraOptionQLearning:
 		q = self.getQvalue(joint_state, joint_option)
 		return q - v
 
-	def update(self, joint_state, joint_option, reward, done): #joint-state is a consistent sample from common-belief
+	def update(self, joint_state, joint_option, reward, done):
 		# One-step update target
 		update_target = reward	#delta
-		current_Q = self.getQvalue(joint_state, joint_option) 
+		current_Q = self.getQvalue(joint_state, joint_option)
 		if not done:
 			beta = self.terminationProbOfAtLeastOneAgent(joint_state, joint_option) # (1 - beta) is the probability
 			# that none of the agents terminate. Hence, the current option continues.
@@ -91,24 +81,8 @@ class IntraOptionQLearning:
 																						  joint_option))
 			
 			self.last_value = current_Q
-			# self.last_joint_option = tuple(np.sort(joint_state)) # will it be last_joint_state?
-			# self.last_joint_state = tuple(np.sort(joint_option)) # will it be last_joint_option?
-
-			''' We need to double check this. When all_joint_options has only one element, we fix last_joint_state 
-			and last_joint_option as the key and value of the dictionary all_joint_options.
-			'''
-			# if joint_option in list(all_joint_options.keys()):
-			# 	self.last_joint_state = tuple(np.sort(joint_state)) # will it be last_joint_state?
-			# 	self.last_joint_option = tuple(np.sort(joint_option)) # will it be last_joint_option?
-			# else:
-			# 	self.last_joint_state = tuple(np.sort(joint_state))
-			# 	self.last_joint_option = tuple(self.weights[self.last_joint_state])
-			
-			# self.last_joint_option = tuple(np.sort(joint_state)) # will it be last_joint_state?
-			# self.last_joint_state = tuple(np.sort(joint_option)) # will it be last_joint_option?
-			self.last_joint_state = tuple(np.sort(joint_state)) # will it be last_joint_state?
-			self.last_joint_option = tuple(np.sort(joint_option)) # will it be last_joint_option?
-
+			self.last_joint_option = tuple(np.sort(joint_state))
+			self.last_joint_state = tuple(np.sort(joint_option))
 
 		# Dense gradient update step
 		tderror = update_target - self.last_value
@@ -118,7 +92,7 @@ class IntraOptionQLearning:
 
 
 class IntraOptionActionQLearning:
-	def __init__(self, discount, lr, terminations, qbigomega): #weights 
+	def __init__(self, discount, lr, terminations, weights, qbigomega):
 		# self.n_agents = n_agents
 		self.discount = discount
 		self.lr = lr
@@ -179,4 +153,3 @@ class IntraOptionActionQLearning:
 		self.last_joint_state = joint_state
 		self.last_joint_option = joint_option
 		self.last_joint_action = joint_action
-		
