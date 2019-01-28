@@ -1,4 +1,5 @@
 from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning
+from optionCritic.policies import SoftmaxOptionPolicy, SoftmaxActionPolicy
 
 from distributed.belief import MultinomialDirichletBelief
 from distributed.broadcast import Broadcast
@@ -23,55 +24,59 @@ class DOC:
         '''
         # set initial belief
         initial_joint_observation = params['env']['initial_joint_state']
-        self.b = MultinomialDirichletBelief(env, initial_joint_observation)
+        self.belief = MultinomialDirichletBelief(env, initial_joint_observation)
         #self.b0 = Belief(env)
 
         '''
         3. Sample a joint state s := vec(s_1,...,s_n) according to b_0
         '''
-        self.s = self.b.sampleJointState()
+        self.joint_state = self.belief.sampleJointState()
+        print('joint_state',self.joint_state)
 
         # policy over options
         self.mu_policy = mu_policy
+        #print(self.mu_policy)
 
-        self.o = self.chooseOption()
-        self.a = self.chooseAction()
+        self.joint_option = self.chooseOption() #self.chooseOption()
+        self.joint_action = self.chooseAction(self.joint_state,self.joint_option)
 
-        
+
     def chooseOption(self):
         # Choose joint-option o based on softmax option-policy
-        
-        #select agents randomly to pick options
-        agent_order = [agent.ID for agent in self.env.agents]
-        shuffle(agent_order)
-        print('agent order :', agent_order)
-    
-        #let agents select options from available option pool
-        for agent in agent_order:
-            option_mask = [not(option.available) for option in self.options]
-            # print(option_mask)
-    
-            # pmf = [0, 0, 0.7, 0.1, 0.2]
-            pmf = self.mu_policy.pmf(self.s[agent])
-            pmf = np.ma.masked_array(pmf, option_mask)
-            # print('pmf : ', pmf)
+        joint_state = tuple(np.sort(self.joint_state))
 
-            # select option for agent
-            # TODO : in order to sample option instead of choosing the best one, the masked pdf needs to be re-normalized
-            selected_option_idx = np.argmax(pmf)
-            self.env.agents[agent].option = self.options[selected_option_idx].optionID
-            # print(selected_option_idx)
+        joint_option = self.mu_policy.sample(joint_state)
+        print('joint_option',joint_option)
 
-            #remove the selected option from available option pool by setting availability to False
-            self.options[selected_option_idx].available = False
+        for option in self.options:
+            option.available = True
 
-    def chooseAction(self):
+        for option in joint_option:
+            self.options[option].available = False
+
+        return joint_option
+
+#     def chooseAction(self):
+#         joint_action = []
+#         for agent in self.env.agents:
+#             print('agent state', agent.state, 'agent option', agent.option)
+#             action = self.options[agent.option].policy.sample(agent.state)
+#             print('agent ID:', agent.ID, 'state:', agent.state, 'option ID:', agent.option, 'action:', action)
+#             agent.action = action
+#             joint_action.append(action)
+
+#         return joint_action
+
+    def chooseAction(self, joint_state, joint_option):
         joint_action = []
         for agent in self.env.agents:
-            action = self.options[agent.option].policy.sample(agent.state)
-            print('agent ID:', agent.ID, 'state:', agent.state, 'option ID:', agent.option, 'action:', action)
-            agent.action = action
-            joint_action.append(action)
+            print('agent state', agent.state, 'agent option', agent.option)
+            agent.state = joint_state[agent.ID]
+            agent.option = joint_option[agent.ID]
+            agent_action = self.options[agent.option].policy.sample(agent.state)
+            print('agent ID:', agent.ID, 'state:', agent.state, 'option ID:', agent.option, 'agent action:', agent_action)
+            agent.action = agent_action
+            joint_action.append(agent_action)
 
         return joint_action
 
@@ -84,25 +89,25 @@ class DOC:
         
         reward, next_true_joint_state, done, _ = self.env.step(joint_action)
 
-        broadcasts = Broadcast(self.env, next_true_joint_state, self.s, self.o, terminations)
+        broadcasts = Broadcast(self.env, next_true_joint_state, self.joint_state, self.joint_option,done).broadcastBasedOnQ(critic,reward)
 
         #broadcasts = self.env.broadcast(reward, next_true_joint_state, self.s, self.o, terminations)
         joint_observation = self.env.get_observation(broadcasts)
 
-        self.b = MultinomialDirichletBelief(self.env, joint_observation)
-        self.s = self.b.sampleJointState()
+        self.belief = MultinomialDirichletBelief(self.env, joint_observation)
+        self.joint_state = self.belief.sampleJointState()
 
         # Critic update
-        update_target = critic.update(self.s, self.o, reward, done)
-        action_critic.update(self.s, self.o, self.a, reward, done)
+        update_target = critic.update(self.joint_state, self.joint_option, reward, done)
+        action_critic.update(self.joint_state, self.joint_option, self.joint_action, reward, done)
 
 
-        critic_feedback = action_critic.getQvalue(self.s, self.o, self.a)  #Q(s,o,a)
+        critic_feedback = action_critic.getQvalue(self.joint_state, self.joint_option, self.joint_action)  #Q(s,o,a)
 
         if baseline:
-            critic_feedback -= critic.value(self.s, self.o)
+            critic_feedback -= critic.value(self.joint_state, self.joint_option)
         return critic_feedback
 
 
     def improveOption_of_agent(self, agentID, intra_option_policy_improvement, termination_improvement, critic_feedback):
-        return intra_option_policy_improvement.update(agent_state, agent_action, critic_feedback), termination_improvement.update(agentID, self.s, self.o)
+        return intra_option_policy_improvement.update(agent_state, agent_action, critic_feedback), termination_improvement.update(agentID, self.joint_state, self.joint_option)
