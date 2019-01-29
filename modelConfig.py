@@ -7,6 +7,7 @@ params = {
 		'broadcast_penalty'	:  -0.01,
 		'collision_penalty' :  -0.01,
 		'episode_length'	: 	500
+		#'initial_joint_state'	:	(11, 31, 21)
 	},
 	'agent'	:	{
 		'n_options'	:	5,
@@ -21,7 +22,8 @@ params = {
 		'n_steps' 		: 	100,
 		'seed'			:	np.random.RandomState(1234),
 		'discount'		:	0.1,
-		'lr_critic'		: 	0.01	#alpha_Q
+		'lr_critic'		: 	0.01,	#alpha_Q
+		'lr_action_critic'	: 0.01
 	},
 	
 	'doc'	:	{
