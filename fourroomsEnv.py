@@ -1,17 +1,26 @@
 import numpy as np
+from matplotlib import pyplot as plt
 import itertools
 from collections import Counter
 from enum import IntEnum
+import gym
 from gym import core, spaces
 from gym.envs.registration import register
 from agent import Agent
+from option import Option
+from modelConfig import params
+from optionCritic.Qlearning import IntraOptionQLearning
+import copy
 import sys
 
 if sys.version_info[0] < 3:
     print("Warning! Python 2 can lead to unpredictable behaviours. Please use Python 3 instead.")
 
 
-class FourroomsMA:
+# class FourroomsMA(gym.Env):
+class FourroomsMA():
+
+    #metadata = {'render.modes': ['state_pixel_rgb']} 
 
     # Defines the atomic actions for the agents
     class Actions(IntEnum):
@@ -23,7 +32,7 @@ class FourroomsMA:
         # stay = 4
 
 
-    def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty =-0.01, collision_penalty = -0.01):
+    def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty = -0.01, collision_penalty = -0.01):
         layout = """\
 wwwwwwwwwwwww
 w     w     w
@@ -50,14 +59,29 @@ wwwwwwwwwwwww
         # 1 : wall
         self.occupancy = np.array([list(map(lambda c: 1 if c == 'w' else 0, line)) for line in layout.splitlines()])
 
+        # # create frame for RGB visualization
+        # self.occupancy_visual = np.zeros((13,13,3))
+        # for i in range(13):
+        #     for j in range(13):
+        #         if self.occupancy[i,j] == 0:
+        #             self.occupancy_visual[i,j,0] = 255
+        #             self.occupancy_visual[i,j,1] = 255
+        #             self.occupancy_visual[i,j,2] = 255
+
+        #         else: # a shade of grey
+        #             self.occupancy_visual[i,j,0] = 14
+        #             self.occupancy_visual[i,j,1] = 14
+        #             self.occupancy_visual[i,j,2] = 14
+
+
         # Intialize atomic actions, and action spaces both for individual agents and for the joint actions a = (a^0, a^1,..., a^n)
         self.agent_actions = FourroomsMA.Actions
-        self.agent_action_space = spaces.Discrete(len(self.agent_actions))  # Not sure if needed
+        self.action_space = spaces.Discrete(len(self.agent_actions))
         self.joint_actions = list(itertools.product(range(len(self.agent_actions)), repeat=self.n_agents))
 
         # Initialize agents with a name (agent i) and an ID (i)
         self.agents = [Agent(ID = i, name = 'agent %d' % i) for i in range(self.n_agents)]
-        self.agentNames = ['agent %d' % i for i in range(self.n_agents)]    #do we need this?
+        self.agentNames = ['agent %d' % i for i in range(self.n_agents)]
 
         self.observation_space = spaces.Discrete(np.sum(self.occupancy == 0))
 
@@ -87,12 +111,8 @@ wwwwwwwwwwwww
 
 
         # Generate the set of joint states (s^0,..., s^n), discarding states with agent collisions (e.g. (2,2,3) )
-        '''
         self.states_list = [s for s in list(itertools.product(self.cell_list, repeat=self.n_agents))
                             if len(s) == len(np.unique(s))]
-        '''
-        
-        self.states_list = list(itertools.permutations(self.cell_list, self.n_agents)) #faster than itertools.product
 
         self.goals = [50, 62, 71, 98, 103]  # fixed goals
         self.goals.sort()                   # important if not already sorted in line above
@@ -160,28 +180,30 @@ wwwwwwwwwwwww
         We consider a case in which rewards are zero on all state transitions.
         """
 
-        assert len(actions) == len(self.agents), "Number of actions (" + str(
-            len(actions)) + ") does not match number of agents (" + str(self.n_agents) + ")"
+        # assert len(actions) == len(self.agents), "Number of actions (" + str(
+        #     len(actions)) + ") does not match number of agents (" + str(self.n_agents) + ")"
 
         # Process movement based on real states (not belief)
 
         # If all goals were discovered, end episode
         done = self.discovered_goals == self.goals
 
-        rewards = [0] * self.n_agents
+        rewards = [0.] * self.n_agents
+
+        reward = 0.
 
         if not done:
 
             nextcells = [None] * self.n_agents
             rand_nums = self.rng.uniform(size=self.n_agents)
 
-            # print(rand_nums)
-
-
             for i in range(self.n_agents):
 
                 currcell = self.tocellcoord[self.agents[i].state]
-                act = actions[i]
+                if isinstance(actions,int):
+                    act = actions
+                else:
+                    act = actions[i]
                 direction = self.directions[act]
 
                 if rand_nums[i] > 1/3:  # pick action as intended
@@ -224,7 +246,46 @@ wwwwwwwwwwwww
 
             self.currstate = tuple(nextcells)
 
-        return rewards, done, None      # Observations are not returned; they need to be queried with broadcasts
+            # # make the first agent's state red for visual
+            # (row_agent1,col_agent1) = self.tocellcoord[self.currstate[0]]
+            # self.occupancy_visual[row_agent1,col_agent1,0] = 255
+            # self.occupancy_visual[row_agent1,col_agent1,1] = 0
+            # self.occupancy_visual[row_agent1,col_agent1,2] = 0
+
+
+
+
+            # # make the second agent's state green for visual
+            # (row_agent2,col_agent2) = self.tocellcoord[self.currstate[1]]
+            # self.occupancy_visual[row_agent2,col_agent2,0] = 0
+            # self.occupancy_visual[row_agent2,col_agent2,1] = 255
+            # self.occupancy_visual[row_agent2,col_agent2,2] = 0
+
+
+            # # make the third agent's state blue for visual
+            # (row_agent3,col_agent3) = self.tocellcoord[self.currstate[2]]
+            # self.occupancy_visual[row_agent3,col_agent3,0] = 0
+            # self.occupancy_visual[row_agent3,col_agent3,1] = 0
+            # self.occupancy_visual[row_agent3,col_agent3,2] = 255
+
+
+
+            reward = np.sum(rewards)
+
+        # return reward, self.occupancy_visual, done, None     
+        return reward, tuple(nextcells), done, None 
+
+    def neighbouringState(self,agent,action): # agent \in {0,1,2..}
+        agent_curr_state = self.currstate[agent] 
+        currcell = self.tocellcoord[agent_curr_state]
+        direction = self.directions[action]
+        if self.occupancy[tuple(currcell+direction)] == 1:
+            return None
+        else:
+            neighbouring_cell = self.tocellnum[tuple(currcell+direction)]
+
+            return neighbouring_cell
+
 
 
     # get the list of common observation, y_list, based on the broadcast action of each agent
@@ -246,10 +307,18 @@ wwwwwwwwwwwww
 
         return y_list
 
+    # def _render(self, mode='state_pixel_rgb', close=False):
+    #     plt.imshow(self.occupancy_visual)
+    #     plt.show()
+
+
+
+
+
 
 register(
-    id='FourroomsMA-v0',
-    entry_point='fourroomsMA:FourroomsMA',
+    id='FourroomsMA-v1',
+    entry_point='fourroomsEnv:FourroomsMA',
     timestep_limit=20000,
     reward_threshold=1,  # should we modify this?
 )
