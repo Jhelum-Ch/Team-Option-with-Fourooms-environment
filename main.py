@@ -1,6 +1,7 @@
 from fourroomsEnv import FourroomsMA
 from modelConfig import params
 from utils.unitTest import testCreateOption, testQ, testSoftmaxOptionPolicy #testActionSelection, testIntraOptionQLearning
+from train import Trainer
 
 def main():
 	env = FourroomsMA(n_agents=params['env']['n_agents'],
@@ -8,7 +9,10 @@ def main():
 					  broadcast_penalty =params['env']['broadcast_penalty'],
 					  collision_penalty = params['env']['collision_penalty'])
 	
-	testCreateOption(env)
+	trainer = Trainer(env)
+	trainer.trainEpisode()
+	
+	# testCreateOption(env)
 	# testOptionSelection(env)
 	#testActionSelection(env)
 	# testIntraOptionQLearning(env)
@@ -18,6 +22,8 @@ def main():
 	# testQ(env)
 	# testSoftmaxOptionPolicy(env)
 	# print(env.currstate)
+	
+	
 	
 if __name__ == '__main__':
 	main()
