@@ -92,7 +92,7 @@ wwwwwwwwwwwww
 
         # Directions: up, down, left, right
         self.directions = [np.array((-1, 0)), np.array((1, 0)), np.array((0, -1)), np.array((0, 1))]
-        self.rng = np.random.RandomState(1234)
+        self.rng = params['train']['seed'] #np.random.RandomState(1234)
 
 
         # Generate cell numbering, along with conversion number <---> coordinates
