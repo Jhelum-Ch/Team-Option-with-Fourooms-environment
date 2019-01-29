@@ -92,7 +92,7 @@ class IntraOptionQLearning:
 
 
 class IntraOptionActionQLearning:
-	def __init__(self, discount, lr, terminations, weights, qbigomega):
+	def __init__(self, discount, lr, terminations, qbigomega):
 		# self.n_agents = n_agents
 		self.discount = discount
 		self.lr = lr
