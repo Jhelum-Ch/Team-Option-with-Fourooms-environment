@@ -81,8 +81,8 @@ class IntraOptionQLearning:
 																						  joint_option))
 			
 			self.last_value = current_Q
-			self.last_joint_option = tuple(np.sort(joint_state))
-			self.last_joint_state = tuple(np.sort(joint_option))
+			self.last_joint_option = tuple(np.sort(joint_option))
+			self.last_joint_state = tuple(np.sort(joint_state))
 
 		# Dense gradient update step
 		tderror = update_target - self.last_value
