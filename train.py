@@ -1,10 +1,11 @@
 from optionCritic.option import createOptions
 from doc import DOC
 from modelConfig import params
-from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning
+from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning, AgentQLearning
+import numpy as np
 
 
-class Trainer:
+class Trainer(object):
 	def __init__(self, env):
 		self.env = env
 		self.n_agents = params['env']['n_agents']
@@ -56,13 +57,30 @@ class Trainer:
 													   terminations=terminations,
 													   qbigomega=critic)
 			
+			x = [option.policy.weights for option in options]
+			# print(x[0].shape)
+			# import numpy as np; p = np.stack((x[:]), axis = 0)
+			# print(p.shape)
+			
+			# agent_q = AgentQLearning(discount=params['train']['discount'],
+			# 						 lr = params['train']['lr_agent_q'],
+			# 						 weights=np.stack(([option.policy.weights for option in options][:]), axis = 0))
+			
+			agent_q = AgentQLearning(discount=params['train']['discount'],
+									 lr=params['train']['lr_agent_q'],
+									 options=options)
+			
+			
 			critic.start(joint_state, joint_option)
 			action_critic.start(joint_state,joint_option,joint_action)
+			agent_q.start(joint_state, joint_option, joint_action)
+			#print(agent_q.value(joint_state, joint_option, joint_action))
 			
 			# import pdb; pdb.set_trace()
 			
 			done = False
 			for iteration in range(params['env']['episode_length']):
+				
 				
 				# option evaluation
 				critic_feedback, done = doc.evaluateOption(critic=critic,
@@ -71,8 +89,6 @@ class Trainer:
 														   joint_option=joint_option,
 														   joint_action=joint_action,
 														   baseline=False)
-				
-				import pdb; pdb.set_trace()
 				
 				if done:
 					break
