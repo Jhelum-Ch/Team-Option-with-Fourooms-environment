@@ -59,7 +59,7 @@ class DOC:
 		joint_action = []
 		for agent in self.env.agents:
 			action = self.options[agent.option].policy.sample(agent.state)
-			print('agent ID:', agent.ID, 'state:', agent.state, 'option ID:', agent.option, 'action:', action)
+			# print('agent ID:', agent.ID, 'state:', agent.state, 'option ID:', agent.option, 'action:', action)
 			joint_action.append(action)
 			
 		return tuple(joint_action)
