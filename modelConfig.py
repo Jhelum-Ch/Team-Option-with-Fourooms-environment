@@ -24,12 +24,8 @@ params = {
 		'discount'		:	0.1,
 		'lr_critic'		: 	0.01,	#alpha_Q
 		'lr_action_critic'	: 0.01,
-		'lr_agent_q'		: 0.01
+		'lr_agent_q'		: 0.01,
+		'lr_theta'			: 0.01,
+		'lr_phi'			: 0.01
 	}
-	# ,
-	#
-	# 'doc'	:	{
-	# 	'lr_theta'	: 0.01,
-	# 	'lr_phi'	: 0.01
-	# }
 }
