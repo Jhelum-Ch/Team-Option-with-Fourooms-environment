@@ -35,8 +35,9 @@ class DOC:
 		
 		# self.joint_option = self.chooseOption(joint_state=initial_joint_observation)  # since initial joint state is same as initial joint observation
 		# self.joint_action = self.chooseAction()
+		self.broadcast = Broadcast(self.env)
 		
-	def chooseOption(self, joint_state):
+	def initializeOption(self, joint_state):
 		# Choose joint-option o based on softmax option-policy
 		joint_state = tuple(np.sort(joint_state))
 		
@@ -54,6 +55,38 @@ class DOC:
 			idx += 1
 			
 		return joint_option
+	
+	def chooseOptionOnTermination(self, options, joint_option, joint_state):
+		terminations = []
+		for agentID in range(len(joint_state)):
+			state = joint_state[agentID]
+			option = joint_option[agentID]
+			
+			# for each agent sample from termination. This gives a boolean value representing whether the option terminates
+			terminate = options[option].termination.sample(state)
+			
+			# make the options that terminate available
+			if terminate:
+				options[option].available = True
+			terminations.append(terminate)
+		
+		# available_options = [option.optionID for option in options if option.available]
+		
+		# if none of the options terminated, return the existing joint option
+		if not np.sum(terminations):
+			return joint_option
+			
+		# if at least one of the agents are terminating, sample a joint option from mu_policy that conforms with the
+		# non-terminating options
+		#TODO : account for options that did not terminate and the available options
+		sampled_joint_option  = self.mu_policy.sample(joint_state = tuple(np.sort(joint_state)))
+		
+		# make the options unavailable
+		for option in sampled_joint_option:
+			options[option].available = False
+		# return the joint options
+		return sampled_joint_option
+	
 			
 	def chooseAction(self):
 		joint_action = []
@@ -64,19 +97,12 @@ class DOC:
 			
 		return tuple(joint_action)
 	
-	def evaluateOption(self, critic, action_critic, joint_state, joint_option, joint_action, baseline=False):
-		
-		reward, next_true_joint_state, done, _ = self.env.step(joint_action)
-		
-		broadcasts = Broadcast(self.env, next_true_joint_state, joint_state, joint_option,
-							   done).broadcastBasedOnQ(critic, reward)
-		
-		# broadcasts = self.env.broadcast(reward, next_true_joint_state, self.s, self.o, terminations)
-		joint_observation = self.env.get_observation(broadcasts)
-		
-		belief = MultinomialDirichletBelief(self.env, joint_observation)
-		joint_state = belief.sampleJointState()
-		
+	def toBroadcast(self, next_true_joint_state, sampled_curr_joint_state, joint_option, done, critic, reward):
+		return self.broadcast.broadcastBasedOnQ(critic, reward, next_true_joint_state, sampled_curr_joint_state,
+												joint_option,done)
+	
+	def evaluateOption(self, critic, action_critic, joint_state, joint_option, joint_action, reward,
+					   done, baseline=False):
 		# Critic update
 		critic.update(joint_state, joint_option, reward, done)
 		action_critic.update(joint_state, joint_option, joint_action, reward, done)
@@ -85,19 +111,14 @@ class DOC:
 		
 		if baseline:
 			critic_feedback -= critic.value(joint_state, joint_option)
-		return critic_feedback, done
+		return critic_feedback
 	
-	# run critic to calculate Q value
-	
-		# decide to broadcast, based on Q value
-	
-		# get joint observation y'
-	
-		# update belief, based on y' : update self.belief
-	
-		# sample joint state based on y' : update self.state
-			
+	def improveOption(self, policy_obj, termination_obj, joint_state, joint_option, joint_action, critic_feedback):
+		# update theta : policy improvement
+		policy_obj.update(joint_state, joint_option, joint_action, critic_feedback)
 		
+		#update phi : temriantion (beta) improvement
+		termination_obj.update(joint_state, joint_option)
 	
 			
 	
