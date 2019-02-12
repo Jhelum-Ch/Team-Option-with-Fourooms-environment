@@ -12,7 +12,7 @@ class MultinomialDirichletBelief:
 		super(MultinomialDirichletBelief, self).__init__()
 		self.env = copy.deepcopy(env)
 		# self.env = env.deepcopy()
-		self.joint_observation = joint_observation
+		# self.joint_observation = joint_observation
 		self.sample_count = sample_count  # sample_count is for rejection sampling
 		self.curr_joint_state = self.env.currstate
 		self.states_list = self.env.states_list
@@ -61,7 +61,8 @@ class MultinomialDirichletBelief:
 			a = stats.dirichlet.rvs(np.add(self.alpha, counts_vec), size=1, random_state=1)
 			return a[0]  # return 1 random sample
 	
-	def sampleJointState(self):  # sample one joint_state from posterior
+	def sampleJointState(self, joint_observation):  # sample one joint_state from posterior
+		self.joint_observation = joint_observation
 		sampled_state_idx = int(np.random.choice(range(len(self.states_list)), 1, p=self.posteriorPMF()))
 		return self.states_list[sampled_state_idx]
 	

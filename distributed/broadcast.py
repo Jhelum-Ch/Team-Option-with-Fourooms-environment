@@ -4,13 +4,13 @@ from optionCritic.Qlearning import IntraOptionQLearning
 import copy
 
 class Broadcast:
-	def __init__(self, env, true_current_joint_state, past_sampled_joint_state, joint_option,done): #terminations
+	def __init__(self, env): #terminations
 		self.env = env
-		self.true_current_joint_state = true_current_joint_state
-		self.past_sampled_joint_state = past_sampled_joint_state
-		self.joint_option = joint_option
-		#self.terminations = terminations
-		self.done = done
+		# self.true_current_joint_state = true_current_joint_state
+		# self.past_sampled_joint_state = past_sampled_joint_state
+		# self.joint_option = joint_option
+		# #self.terminations = terminations
+		# self.done = done
 
 	# def broadcastBasedOnQ(self, Q0, Q1):
 	#     """An agent broadcasts if the agent is at any goal or the intra-option value for
@@ -19,12 +19,17 @@ class Broadcast:
 	#     return (self.agent.state in self.goals) or (Q0 < Q1)
 
 
-	def broadcastBasedOnQ(self, critic, reward):
+	def broadcastBasedOnQ(self, critic, reward, next_true_joint_state, sampled_curr_joint_state, joint_option,done):
+		#self.next_true_joint_state = next_true_joint_state
+		#self.sampled_curr_joint_state = sampled_curr_joint_state
+		self.joint_option = joint_option
+		# self.terminations = terminations
+		self.done = done
 		# should take agentQ instead of critic
 		broadcasts = np.zeros(self.env.n_agents)
 		for agent in self.env.agents:
-			modified_current_joint_state = np.copy(self.past_sampled_joint_state)
-			modified_current_joint_state[agent.ID] = self.true_current_joint_state[agent.ID]
+			modified_current_joint_state = np.copy(sampled_curr_joint_state)
+			modified_current_joint_state[agent.ID] = next_true_joint_state[agent.ID]
 			# modified_current_joint_state = tuple(np.sort(modified_current_joint_state))
 
 			#critic = IntraOptionQLearning(params['env']['discount'], params['doc']['lr_Q'],self.terminations, option_weights)
