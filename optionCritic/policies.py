@@ -22,7 +22,6 @@ class SoftmaxOptionPolicy:
 	def sample(self, joint_state):
 		idx = int(self.rng.choice(len(self.weights[joint_state].keys()), p=self.pmf(joint_state)))
 		joint_option = list(self.weights[joint_state].keys())[idx]
-		# TODO : make the sampled option unavailable
 		return joint_option
 
 # class SoftmaxOptionPolicy:
