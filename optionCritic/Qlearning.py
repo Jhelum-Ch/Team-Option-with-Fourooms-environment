@@ -48,6 +48,10 @@ class IntraOptionQLearning:
 			# calculate values for each of these joint options. One can call getQvalue here recursively
 			all_Q = {option : self.getQvalue(joint_state, option) for option in all_joint_options}
 			
+			if not all_Q:
+				return 0	# accounts for advantage function when Q(s,o) has never been called before for any o
+				# import  pdb; pdb.set_trace()
+			
 			# return the maximum value and corresponding joint state
 			max_idx, max_value = max(all_Q.items(), key=operator.itemgetter(1))
 			
