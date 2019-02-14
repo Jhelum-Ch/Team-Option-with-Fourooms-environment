@@ -29,3 +29,9 @@ params = {
 		'lr_phi'			: 0.01
 	}
 }
+
+paths = {
+	'output'	:	{
+		'base_folder'	:	'/home/ml/sbasu11/Documents/MultiAgent/experiments/'
+	}
+}
