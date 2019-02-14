@@ -5,10 +5,15 @@ from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearn
 from distributed.belief import MultinomialDirichletBelief
 from optionCritic.gradients import TerminationGradient, IntraOptionGradient
 import numpy as np
+# import matplotlib
+# matplotlib.use('Agg')
+# import matplotlib.pyplot as plt
+from utils.viz import plotReward
 
 
 class Trainer(object):
-	def __init__(self, env):
+	def __init__(self, env, expt_folder):
+		self.expt_folder = expt_folder
 		self.env = env
 		self.n_agents = params['env']['n_agents']
 	
@@ -24,7 +29,9 @@ class Trainer(object):
 	
 	def trainEpisode(self):
 		
+		episode_reward = []
 		for episode in range(params['train']['n_episodes']):
+			print('Episode : ', episode)
 			# put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# 'seed'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
@@ -78,8 +85,9 @@ class Trainer(object):
 			
 			done = False
 			cum_reward = 0
+			itr_reward = []
 			for iteration in range(params['env']['episode_length']):
-				print('Episode : ', episode, 'Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
+				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
 				# iv
 				joint_action = doc.chooseAction()
 				
@@ -127,8 +135,15 @@ class Trainer(object):
 				joint_observation = next_joint_observation
 				sampled_joint_state = belief.sampleJointState(joint_observation) # iii
 				
+				itr_reward.append(cum_reward)
+				if not iteration%30:
+					plotReward(itr_reward,'iterations','cumulative reward',self.expt_folder, 'iteration_reward.png')
+				
 				if done:
 					break
+					
+			episode_reward.append(np.mean(itr_reward))
+			plotReward(episode_reward, 'episodes', 'cumulative reward', self.expt_folder, 'episode_reward.png')
 	
 	
 	
