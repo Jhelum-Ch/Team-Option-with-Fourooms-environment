@@ -167,7 +167,7 @@ wwwwwwwwwwwww
 
 
     # update state of the world
-    def step(self, actions, broadcasts):  # actions is a list, broadcasts is a list
+    def step(self, actions, broadcasts):  # actions is a list, broadcasts is a list or tuple
         """
         Each agent can perform one of four actions,
         up, down, left or right, which have a stochastic effect. With probability 2/3, the actions
@@ -246,29 +246,6 @@ wwwwwwwwwwwww
                 rewards[i] += broadcasts[i]*self.broadcast_penalty
 
             self.currstate = tuple(nextcells)
-
-            # # make the first agent's state red for visual
-            # (row_agent1,col_agent1) = self.tocellcoord[self.currstate[0]]
-            # self.occupancy_visual[row_agent1,col_agent1,0] = 255
-            # self.occupancy_visual[row_agent1,col_agent1,1] = 0
-            # self.occupancy_visual[row_agent1,col_agent1,2] = 0
-
-
-
-
-            # # make the second agent's state green for visual
-            # (row_agent2,col_agent2) = self.tocellcoord[self.currstate[1]]
-            # self.occupancy_visual[row_agent2,col_agent2,0] = 0
-            # self.occupancy_visual[row_agent2,col_agent2,1] = 255
-            # self.occupancy_visual[row_agent2,col_agent2,2] = 0
-
-
-            # # make the third agent's state blue for visual
-            # (row_agent3,col_agent3) = self.tocellcoord[self.currstate[2]]
-            # self.occupancy_visual[row_agent3,col_agent3,0] = 0
-            # self.occupancy_visual[row_agent3,col_agent3,1] = 0
-            # self.occupancy_visual[row_agent3,col_agent3,2] = 255
-
 
 
             reward = np.sum(rewards)
