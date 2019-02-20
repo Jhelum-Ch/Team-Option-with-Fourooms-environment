@@ -76,7 +76,7 @@ class DOC:
 		if not np.sum(terminations):
 			return joint_option
 			
-		# if at least one of the agents are terminating, sample a joint option from mu_policy that conforms with the
+		# if at least one of the agent is terminating, sample a joint option from mu_policy that conforms with the
 		# non-terminating options
 		#TODO : account for options that did not terminate and the available options
 		sampled_joint_option  = self.mu_policy.sample(joint_state = tuple(np.sort(joint_state)))
