@@ -167,7 +167,7 @@ wwwwwwwwwwwww
 
 
     # update state of the world
-    def step(self, actions):  # actions is a list, broadcasts is a list
+    def step(self, actions, broadcasts):  # actions is a list, broadcasts is a list
         """
         Each agent can perform one of four actions,
         up, down, left or right, which have a stochastic effect. With probability 2/3, the actions
@@ -243,6 +243,7 @@ wwwwwwwwwwwww
                     self.agents[i].state = s
                     if s in self.goals and s not in self.discovered_goals:
                         rewards[i] += self.goal_reward
+                rewards[i] += broadcasts[i]*self.broadcast_penalty
 
             self.currstate = tuple(nextcells)
 
