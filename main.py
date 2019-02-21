@@ -20,7 +20,7 @@ def main():
 					  collision_penalty = params['env']['collision_penalty'])
 	
 	trainer = Trainer(env, expt_folder)
-	trainer.trainEpisode()
+	trainer.train()
 	
 	
 if __name__ == '__main__':
