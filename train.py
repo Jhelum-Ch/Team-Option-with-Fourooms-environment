@@ -66,8 +66,13 @@ class Trainer(object):
 			self.termination_gradient = TerminationGradient(terminations, self.critic)
 			self.intra_option_policy_gradient = IntraOptionGradient(pi_policies)
 			
+			episode_reward_all_runs = []
+			
 			for _ in range(params['train']['n_epochs']):
-				self.trainEpisode()
+				episode_reward_all_runs.append(self.trainEpisode())
+			
+			plotReward(episode_reward_all_runs, 'episodes', 'avg_cumulative reward', self.expt_folder,
+					   'avg_episode_reward.png')
 
 	def trainEpisode(self):
 		
@@ -77,10 +82,10 @@ class Trainer(object):
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# # 'seed'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
-			joint_observation = joint_state
+			# joint_observation = joint_state
 			#
 			# belief = MultinomialDirichletBelief(self.env, joint_observation)
-			sampled_joint_state= joint_state
+			sampled_joint_state = joint_state
 			#
 			# # create option pool
 			# options, mu_policy = createOptions(self.env)
@@ -97,9 +102,9 @@ class Trainer(object):
 			# d. Choose joint-option o based on softmax option-policy mu
 			joint_option = self.doc.initializeOption(joint_state=joint_state)
 
-			# make the elected options unavailable
-			for option in joint_option:
-				self.options[option].available = False
+			# # make the elected options unavailable
+			# for option in joint_option:
+			# 	self.options[option].available = False
 
 			# joint action
 			joint_action = self.doc.chooseAction()
@@ -125,7 +130,7 @@ class Trainer(object):
 			# termination_gradient = TerminationGradient(terminations, critic)
 			# intra_option_policy_gradient = IntraOptionGradient(pi_policies)
 			
-			done = False
+			# done = False
 			cum_reward = 0
 			itr_reward = []
 			for iteration in range(params['env']['episode_length']):
@@ -186,6 +191,8 @@ class Trainer(object):
 					
 			episode_reward.append(np.mean(itr_reward))
 			plotReward(episode_reward, 'episodes', 'cumulative reward', self.expt_folder, 'episode_reward.png')
+			
+			return np.mean(episode_reward)
 	
 	
 	
