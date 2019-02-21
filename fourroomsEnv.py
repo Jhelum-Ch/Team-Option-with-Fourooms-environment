@@ -290,7 +290,175 @@ wwwwwwwwwwwww
     #     plt.show()
 
 
+def encode(self):
+        """
+        Generates an array encoding of the environment
+        Encoding key:
+        empty               : 0
+        wall                : 1
+        agent               : 2
+        discovered goal     : 10
+        undiscovered goal   : 100
+        Agents can overlap with goals. This is indicated by keys (12 or 102).
+        """
 
+        # Start from occupancy
+        encoding = self.occupancy.copy();
+
+        # Add goals
+        for g in self.goals:
+            if g in self.discovered_goals:
+                encoding[self.tocellcoord[g]] += 10
+            else:
+                encoding[self.tocellcoord[g]] += 100
+
+        # Add agents
+        for pos in self.currstate:
+            encoding[self.tocellcoord[pos]] += 2
+
+        return encoding
+
+    def render(self, mode='human', close=False):
+        """
+        Render the whole-grid human view
+        """
+
+        if close:
+            if self.grid_render:
+                self.grid_render.close()
+            return
+
+        if self.grid_render is None:
+            self.grid_render = Renderer(
+                self.width * CELL_PIXELS,
+                self.height * CELL_PIXELS,
+                True if mode == 'human' else False
+            )
+
+        r = self.grid_render
+
+        r.beginFrame()
+
+        # Render the whole grid
+        self._render_grid(r, CELL_PIXELS)
+
+        #Draw agents
+        for pos in self.currstate:
+
+            loc = self.tocellcoord[pos]
+
+            # Draw the agent
+            r.push()
+            r.translate(
+                CELL_PIXELS * (loc[1] + 0.5),
+                CELL_PIXELS * (loc[0] + 0.5)
+            )
+            r.setLineColor(255, 0, 0)
+            r.setColor(255, 0, 0)
+            r.drawCircle(0,0,12)
+            r.pop()
+
+
+        r.endFrame()
+
+        if mode == 'rgb_array':
+            return r.getArray()
+        elif mode == 'pixmap':
+            return r.getPixmap()
+
+        return r
+
+
+    def _render_grid(self, r, tile_size):
+        """
+        Render this grid at a given scale
+        :param r: target renderer object
+        :param tile_size: tile size in pixels
+        """
+
+        assert r.width == self.width * tile_size
+        assert r.height == self.height * tile_size
+
+        # Total grid size at native scale
+        widthPx = self.width * CELL_PIXELS
+        heightPx = self.height * CELL_PIXELS
+
+        r.push()
+
+        # Internally, we draw at the "large" full-grid resolution, but we
+        # use the renderer to scale back to the desired size
+        r.scale(tile_size / CELL_PIXELS, tile_size / CELL_PIXELS)
+
+        # Draw the background of the in-world cells black
+        r.fillRect(
+            0,
+            0,
+            widthPx,
+            heightPx,
+            0, 0, 0
+        )
+
+        # Draw grid lines
+        r.setLineColor(100, 100, 100)
+        for rowIdx in range(0, self.height):
+            y = CELL_PIXELS * rowIdx
+            r.drawLine(0, y, widthPx, y)
+        for colIdx in range(0, self.width):
+            x = CELL_PIXELS * colIdx
+            r.drawLine(x, 0, x, heightPx)
+
+        # Render the grid
+
+        grid = self.encode()
+
+        for j in range(0, self.width):
+            for i in range(0, self.height):
+                cell = grid[i,j]
+                if cell == 0:
+                    continue
+
+                r.push()
+                r.translate(j * CELL_PIXELS, i * CELL_PIXELS)
+                if cell == 1:
+                    self._render_wall(r)
+                elif cell == 10 or cell == 12:
+                    self._render_goal(r, discovered=True)
+                elif cell == 100 or cell == 102:
+                    self._render_goal(r, discovered=False)
+                r.pop()
+
+        r.pop()
+
+    @staticmethod
+    def _render_wall(r):
+        c = np.array([100, 100, 100])       # Grey
+
+        r.setLineColor(c[0], c[1], c[2])
+        r.setColor(c[0], c[1], c[2])
+
+        r.drawPolygon([
+            (0          , CELL_PIXELS),
+            (CELL_PIXELS, CELL_PIXELS),
+            (CELL_PIXELS,           0),
+            (0          ,           0)
+        ])
+
+    @staticmethod
+    def _render_goal(r, discovered=False):
+        if not discovered:
+            c = np.array([0, 255, 0])       # Bright green
+        else:
+            c = np.array([0, 100, 0])       # Dull green
+
+        r.setLineColor(c[0], c[1], c[2])
+        r.setColor(c[0], c[1], c[2])
+
+        r.drawPolygon([
+            (0          , CELL_PIXELS),
+            (CELL_PIXELS, CELL_PIXELS),
+            (CELL_PIXELS,           0),
+            (0          ,           0)
+        ])
 
 
 
