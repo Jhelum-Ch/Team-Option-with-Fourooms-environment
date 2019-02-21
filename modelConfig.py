@@ -18,16 +18,16 @@ params = {
 	},
 	'train': {
 		'n_runs'		: 	10,
-		'n_epochs'		: 	50,
+		# 'n_epochs'		: 	50,
 		'n_episodes'	:	100,
-		'n_steps' 		: 	100,
+		'n_steps' 		: 	500,
 		'seed'			:	np.random.RandomState(1234),
 		'discount'		:	0.1,
-		'lr_critic'		: 	0.01,	#alpha_Q
-		'lr_action_critic'	: 0.01,
-		'lr_agent_q'		: 0.01,
-		'lr_theta'			: 0.01,
-		'lr_phi'			: 0.01
+		'lr_critic'		: 	0.001,	#alpha_Q
+		'lr_action_critic'	: 0.001,
+		'lr_agent_q'		: 0.001,
+		'lr_theta'			: 0.001,
+		'lr_phi'			: 0.001
 	}
 }
 
