@@ -12,6 +12,7 @@ from modelConfig import params
 from optionCritic.Qlearning import IntraOptionQLearning
 import copy
 import sys
+from rendering import *
 
 if sys.version_info[0] < 3:
     print("Warning! Python 2 can lead to unpredictable behaviours. Please use Python 3 instead.")
