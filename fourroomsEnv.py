@@ -7,7 +7,7 @@ import gym
 from gym import core, spaces
 from gym.envs.registration import register
 from agent import Agent
-from option import Option
+from optionCritic.option import Option
 from modelConfig import params
 from optionCritic.Qlearning import IntraOptionQLearning
 import copy
@@ -18,7 +18,9 @@ if sys.version_info[0] < 3:
     print("Warning! Python 2 can lead to unpredictable behaviours. Please use Python 3 instead.")
 
 
-# class FourroomsMA(gym.Env):
+# Size in pixels of a cell in the full-scale human view
+CELL_PIXELS = 32
+
 class FourroomsMA():
 
     #metadata = {'render.modes': ['state_pixel_rgb']} 
@@ -55,24 +57,21 @@ wwwwwwwwwwwww
         self.broadcast_penalty = broadcast_penalty
         self.collision_penalty = collision_penalty
 
+
+        # Action enumeration for this environment
+        self.actions = FourroomsMA.Actions
+
+        # Actions are discrete integer values
+        self.action_space = spaces.Discrete(len(self.actions))
+
+        self.step_count = 0
+
+
         # create occupancy matrix.
         # 0 : free cell
         # 1 : wall
         self.occupancy = np.array([list(map(lambda c: 1 if c == 'w' else 0, line)) for line in layout.splitlines()])
 
-        # # create frame for RGB visualization
-        # self.occupancy_visual = np.zeros((13,13,3))
-        # for i in range(13):
-        #     for j in range(13):
-        #         if self.occupancy[i,j] == 0:
-        #             self.occupancy_visual[i,j,0] = 255
-        #             self.occupancy_visual[i,j,1] = 255
-        #             self.occupancy_visual[i,j,2] = 255
-
-        #         else: # a shade of grey
-        #             self.occupancy_visual[i,j,0] = 14
-        #             self.occupancy_visual[i,j,1] = 14
-        #             self.occupancy_visual[i,j,2] = 14
 
 
         # Intialize atomic actions, and action spaces both for individual agents and for the joint actions a = (a^0, a^1,..., a^n)
@@ -86,10 +85,6 @@ wwwwwwwwwwwww
 
         self.observation_space = spaces.Discrete(np.sum(self.occupancy == 0))
 
-        # Confused about this block of code
-        # self.stateActiontuples = [(-2., -2) for _ in self.n_agents]
-        # self.observation = {k: v for k in self.agentNames, v in self.stateActiontuples}
-        # self.observationValues = ()
 
         # Directions: up, down, left, right
         self.directions = [np.array((-1, 0)), np.array((1, 0)), np.array((0, -1)), np.array((0, 1))]
@@ -127,6 +122,10 @@ wwwwwwwwwwwww
         # Current real joint state of the environment.
         self.currstate = None
 
+
+        # Render used to generate image frames
+        self.grid_render = None
+
         self.reset()
 
         # # visualize grid, where walls = -1 and all cells are numbered
@@ -156,6 +155,7 @@ wwwwwwwwwwwww
 
     # reset the world with multiple agents
     def reset(self):
+        self.step_count = 0
         # Sample initial joint state (s_0,...,s_n) without collision
         initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
         for i in range(self.n_agents):
@@ -168,7 +168,7 @@ wwwwwwwwwwwww
 
 
     # update state of the world
-    def step(self, actions, broadcasts):  # actions is a list, broadcasts is a list or tuple
+    def step(self, actions):  # actions is a list,
         """
         Each agent can perform one of four actions,
         up, down, left or right, which have a stochastic effect. With probability 2/3, the actions
@@ -181,51 +181,47 @@ wwwwwwwwwwwww
         We consider a case in which rewards are zero on all state transitions.
         """
 
-        # assert len(actions) == len(self.agents), "Number of actions (" + str(
-        #     len(actions)) + ") does not match number of agents (" + str(self.n_agents) + ")"
+        assert len(actions) == len(self.agents), "Number of actions (" + str(
+            len(actions)) + ") does not match number of agents (" + str(self.n_agents) + ")"
 
         # Process movement based on real states (not belief)
-
-        # If all goals were discovered, end episode
-        done = self.discovered_goals == self.goals
 
         rewards = [0.] * self.n_agents
 
         reward = 0.
 
-        if not done:
 
-            nextcells = [None] * self.n_agents
-            rand_nums = self.rng.uniform(size=self.n_agents)
+        nextcells = [None] * self.n_agents
+        rand_nums = self.rng.uniform(size=self.n_agents)
 
-            for i in range(self.n_agents):
+        for i in range(self.n_agents):
 
-                currcell = self.tocellcoord[self.agents[i].state]
-                if isinstance(actions,int):
-                    act = actions
+            currcell = self.tocellcoord[self.agents[i].state]
+            if isinstance(actions,int):
+                act = actions
+            else:
+                act = actions[i]
+            direction = self.directions[act]
+
+            if rand_nums[i] > 1/3:  # pick action as intended
+                if self.occupancy[tuple(currcell + direction)] == 0:
+                    nextcells[i] = self.tocellnum[tuple(currcell+direction)]
                 else:
-                    act = actions[i]
-                direction = self.directions[act]
+                    nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
+                    # rewards[i] += self.collision_penalty
 
-                if rand_nums[i] > 1/3:  # pick action as intended
-                    if self.occupancy[tuple(currcell + direction)] == 0:
-                        nextcells[i] = self.tocellnum[tuple(currcell+direction)]
-                    else:
-                        nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
-                        # rewards[i] += self.collision_penalty
+            else:   # pick random action, except one initially intended
+                adj_cells = self.adjacent_to(currcell)      # returns list of tuples
+                adj_cells.remove(tuple(currcell+direction))
 
-                else:   # pick random action, except one initially intended
-                    adj_cells = self.adjacent_to(currcell)      # returns list of tuples
-                    adj_cells.remove(tuple(currcell+direction))
+                index = self.rng.choice(range(len(adj_cells)))
+                new_cell = adj_cells[i]
 
-                    index = self.rng.choice(range(len(adj_cells)))
-                    new_cell = adj_cells[i]
-
-                    if self.occupancy[new_cell] == 0:
-                        nextcells[i] = self.tocellnum[new_cell]
-                    else:
-                        nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
-                        # rewards[i] += self.collision_penalty
+                if self.occupancy[new_cell] == 0:
+                    nextcells[i] = self.tocellnum[new_cell]
+                else:
+                    nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
+                    # rewards[i] += self.collision_penalty
 
             # check for inter-agent collisions:
             collisions = [c for c, count in Counter(nextcells).items() if count > 1]
@@ -244,15 +240,21 @@ wwwwwwwwwwwww
                     self.agents[i].state = s
                     if s in self.goals and s not in self.discovered_goals:
                         rewards[i] += self.goal_reward
-                rewards[i] += broadcasts[i]*self.broadcast_penalty
+                        self.discovered_goals.append(s)
+                #rewards[i] += broadcasts[i]*self.broadcast_penalty
 
             self.currstate = tuple(nextcells)
 
 
             reward = np.sum(rewards)
 
-        # return reward, self.occupancy_visual, done, None     
-        return reward, tuple(nextcells), done, None 
+            self.step_count += 1
+
+        # If all goals were discovered, end episode
+        done = len(self.discovered_goals) == len(self.goals)
+
+           
+        return reward, self.currstate, done, None 
 
     def neighbouringState(self,agent,action): # agent \in {0,1,2..}
         agent_curr_state = self.currstate[agent] 
@@ -286,38 +288,34 @@ wwwwwwwwwwwww
 
         return y_list
 
-    # def _render(self, mode='state_pixel_rgb', close=False):
-    #     plt.imshow(self.occupancy_visual)
-    #     plt.show()
 
+    def encode(self):
+            """
+            Generates an array encoding of the environment
+            Encoding key:
+            empty               : 0
+            wall                : 1
+            agent               : 2
+            discovered goal     : 10
+            undiscovered goal   : 100
+            Agents can overlap with goals. This is indicated by keys (12 or 102).
+            """
 
-def encode(self):
-        """
-        Generates an array encoding of the environment
-        Encoding key:
-        empty               : 0
-        wall                : 1
-        agent               : 2
-        discovered goal     : 10
-        undiscovered goal   : 100
-        Agents can overlap with goals. This is indicated by keys (12 or 102).
-        """
+            # Start from occupancy
+            encoding = self.occupancy.copy();
 
-        # Start from occupancy
-        encoding = self.occupancy.copy();
+            # Add goals
+            for g in self.goals:
+                if g in self.discovered_goals:
+                    encoding[self.tocellcoord[g]] += 10
+                else:
+                    encoding[self.tocellcoord[g]] += 100
 
-        # Add goals
-        for g in self.goals:
-            if g in self.discovered_goals:
-                encoding[self.tocellcoord[g]] += 10
-            else:
-                encoding[self.tocellcoord[g]] += 100
+            # Add agents
+            for pos in self.currstate:
+                encoding[self.tocellcoord[pos]] += 2
 
-        # Add agents
-        for pos in self.currstate:
-            encoding[self.tocellcoord[pos]] += 2
-
-        return encoding
+            return encoding
 
     def render(self, mode='human', close=False):
         """

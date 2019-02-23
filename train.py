@@ -90,11 +90,12 @@ class Trainer(object):
 				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
 				# iv
 				joint_action = doc.chooseAction()
+
 				
 				# v
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
 				print('Episode: ', episode, 'done: ', done, 'discovered goals: ', self.env.discovered_goals)
-				cum_reward += reward
+				
 				
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
 				
@@ -107,6 +108,7 @@ class Trainer(object):
 											 reward=reward)
 				print('Broadcasts', broadcasts)
 				
+				cum_reward += reward + np.sum([i*self.env.broadcast_penalty for i in broadcasts])
 				# ix
 				next_joint_observation = self.env.get_observation(broadcasts)
 				
