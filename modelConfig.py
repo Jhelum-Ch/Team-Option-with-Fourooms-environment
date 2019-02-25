@@ -17,7 +17,7 @@ params = {
 		'temperature'	: 0.5
 	},
 	'train': {
-		'n_runs'		: 	10,
+		'n_runs'		: 	1,
 		# 'n_epochs'		: 	50,
 		'n_episodes'	:	100,
 		'n_steps' 		: 	500,
