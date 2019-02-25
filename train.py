@@ -186,8 +186,8 @@ class Trainer(object):
 					break
 					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
-			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards during episode', self.expt_folder,
-					   'single_episode_reward.png')
+			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
+					   'single_episode_reward_per_episode.png')
 	
 		
 	
