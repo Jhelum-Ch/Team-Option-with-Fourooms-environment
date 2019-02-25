@@ -66,17 +66,13 @@ class Trainer(object):
 			self.termination_gradient = TerminationGradient(terminations, self.critic)
 			self.intra_option_policy_gradient = IntraOptionGradient(pi_policies)
 			
-			episode_reward_all_runs = []
+			# for _ in range(params['train']['n_episodes']):
+			self.trainEpisodes()
 			
-			for _ in range(params['train']['n_epochs']):
-				episode_reward_all_runs.append(self.trainEpisode())
-			
-			plotReward(episode_reward_all_runs, 'episodes', 'avg_cumulative reward', self.expt_folder,
-					   'avg_episode_reward.png')
 
-	def trainEpisode(self):
+	def trainEpisodes(self):
 		
-		episode_reward = []
+		sum_of_rewards_per_episode = []
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
@@ -189,12 +185,9 @@ class Trainer(object):
 				if done:
 					break
 					
-			episode_reward.append(np.mean(itr_reward))
-			plotReward(episode_reward, 'episodes', 'cumulative reward', self.expt_folder, 'episode_reward.png')
-			
-			return np.mean(episode_reward)
-	
-	
+			sum_of_rewards_per_episode.append(itr_reward[-1])
+			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards during episode', self.expt_folder,
+					   'single_episode_reward.png')
 	
 		
 	
