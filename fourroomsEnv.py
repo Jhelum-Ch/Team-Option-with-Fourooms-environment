@@ -7,17 +7,20 @@ import gym
 from gym import core, spaces
 from gym.envs.registration import register
 from agent import Agent
-from option import Option
+from optionCritic.option import Option
 from modelConfig import params
 from optionCritic.Qlearning import IntraOptionQLearning
 import copy
 import sys
+from rendering import *
 
 if sys.version_info[0] < 3:
     print("Warning! Python 2 can lead to unpredictable behaviours. Please use Python 3 instead.")
 
 
-# class FourroomsMA(gym.Env):
+# Size in pixels of a cell in the full-scale human view
+CELL_PIXELS = 32
+
 class FourroomsMA():
 
     #metadata = {'render.modes': ['state_pixel_rgb']} 
@@ -54,24 +57,21 @@ wwwwwwwwwwwww
         self.broadcast_penalty = broadcast_penalty
         self.collision_penalty = collision_penalty
 
+
+        # Action enumeration for this environment
+        self.actions = FourroomsMA.Actions
+
+        # Actions are discrete integer values
+        self.action_space = spaces.Discrete(len(self.actions))
+
+        self.step_count = 0
+
+
         # create occupancy matrix.
         # 0 : free cell
         # 1 : wall
         self.occupancy = np.array([list(map(lambda c: 1 if c == 'w' else 0, line)) for line in layout.splitlines()])
 
-        # # create frame for RGB visualization
-        # self.occupancy_visual = np.zeros((13,13,3))
-        # for i in range(13):
-        #     for j in range(13):
-        #         if self.occupancy[i,j] == 0:
-        #             self.occupancy_visual[i,j,0] = 255
-        #             self.occupancy_visual[i,j,1] = 255
-        #             self.occupancy_visual[i,j,2] = 255
-
-        #         else: # a shade of grey
-        #             self.occupancy_visual[i,j,0] = 14
-        #             self.occupancy_visual[i,j,1] = 14
-        #             self.occupancy_visual[i,j,2] = 14
 
 
         # Intialize atomic actions, and action spaces both for individual agents and for the joint actions a = (a^0, a^1,..., a^n)
@@ -85,10 +85,6 @@ wwwwwwwwwwwww
 
         self.observation_space = spaces.Discrete(np.sum(self.occupancy == 0))
 
-        # Confused about this block of code
-        # self.stateActiontuples = [(-2., -2) for _ in self.n_agents]
-        # self.observation = {k: v for k in self.agentNames, v in self.stateActiontuples}
-        # self.observationValues = ()
 
         # Directions: up, down, left, right
         self.directions = [np.array((-1, 0)), np.array((1, 0)), np.array((0, -1)), np.array((0, 1))]
@@ -126,6 +122,10 @@ wwwwwwwwwwwww
         # Current real joint state of the environment.
         self.currstate = None
 
+
+        # Render used to generate image frames
+        self.grid_render = None
+
         self.reset()
 
         # # visualize grid, where walls = -1 and all cells are numbered
@@ -155,6 +155,7 @@ wwwwwwwwwwwww
 
     # reset the world with multiple agents
     def reset(self):
+        self.step_count = 0
         # Sample initial joint state (s_0,...,s_n) without collision
         initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
         for i in range(self.n_agents):
@@ -167,7 +168,7 @@ wwwwwwwwwwwww
 
 
     # update state of the world
-    def step(self, actions):  # actions is a list, broadcasts is a list
+    def step(self, actions):  # actions is a list,
         """
         Each agent can perform one of four actions,
         up, down, left or right, which have a stochastic effect. With probability 2/3, the actions
@@ -180,51 +181,47 @@ wwwwwwwwwwwww
         We consider a case in which rewards are zero on all state transitions.
         """
 
-        # assert len(actions) == len(self.agents), "Number of actions (" + str(
-        #     len(actions)) + ") does not match number of agents (" + str(self.n_agents) + ")"
+        assert len(actions) == len(self.agents), "Number of actions (" + str(
+            len(actions)) + ") does not match number of agents (" + str(self.n_agents) + ")"
 
         # Process movement based on real states (not belief)
-
-        # If all goals were discovered, end episode
-        done = self.discovered_goals == self.goals
 
         rewards = [0.] * self.n_agents
 
         reward = 0.
 
-        if not done:
 
-            nextcells = [None] * self.n_agents
-            rand_nums = self.rng.uniform(size=self.n_agents)
+        nextcells = [None] * self.n_agents
+        rand_nums = self.rng.uniform(size=self.n_agents)
 
-            for i in range(self.n_agents):
+        for i in range(self.n_agents):
 
-                currcell = self.tocellcoord[self.agents[i].state]
-                if isinstance(actions,int):
-                    act = actions
+            currcell = self.tocellcoord[self.agents[i].state]
+            if isinstance(actions,int):
+                act = actions
+            else:
+                act = actions[i]
+            direction = self.directions[act]
+
+            if rand_nums[i] > 1/3:  # pick action as intended
+                if self.occupancy[tuple(currcell + direction)] == 0:
+                    nextcells[i] = self.tocellnum[tuple(currcell+direction)]
                 else:
-                    act = actions[i]
-                direction = self.directions[act]
+                    nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
+                    # rewards[i] += self.collision_penalty
 
-                if rand_nums[i] > 1/3:  # pick action as intended
-                    if self.occupancy[tuple(currcell + direction)] == 0:
-                        nextcells[i] = self.tocellnum[tuple(currcell+direction)]
-                    else:
-                        nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
-                        # rewards[i] += self.collision_penalty
+            else:   # pick random action, except one initially intended
+                adj_cells = self.adjacent_to(currcell)      # returns list of tuples
+                adj_cells.remove(tuple(currcell+direction))
 
-                else:   # pick random action, except one initially intended
-                    adj_cells = self.adjacent_to(currcell)      # returns list of tuples
-                    adj_cells.remove(tuple(currcell+direction))
+                index = self.rng.choice(range(len(adj_cells)))
+                new_cell = adj_cells[i]
 
-                    index = self.rng.choice(range(len(adj_cells)))
-                    new_cell = adj_cells[i]
-
-                    if self.occupancy[new_cell] == 0:
-                        nextcells[i] = self.tocellnum[new_cell]
-                    else:
-                        nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
-                        # rewards[i] += self.collision_penalty
+                if self.occupancy[new_cell] == 0:
+                    nextcells[i] = self.tocellnum[new_cell]
+                else:
+                    nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
+                    # rewards[i] += self.collision_penalty
 
             # check for inter-agent collisions:
             collisions = [c for c, count in Counter(nextcells).items() if count > 1]
@@ -243,37 +240,21 @@ wwwwwwwwwwwww
                     self.agents[i].state = s
                     if s in self.goals and s not in self.discovered_goals:
                         rewards[i] += self.goal_reward
+                        self.discovered_goals.append(s)
+                #rewards[i] += broadcasts[i]*self.broadcast_penalty
 
             self.currstate = tuple(nextcells)
-
-            # # make the first agent's state red for visual
-            # (row_agent1,col_agent1) = self.tocellcoord[self.currstate[0]]
-            # self.occupancy_visual[row_agent1,col_agent1,0] = 255
-            # self.occupancy_visual[row_agent1,col_agent1,1] = 0
-            # self.occupancy_visual[row_agent1,col_agent1,2] = 0
-
-
-
-
-            # # make the second agent's state green for visual
-            # (row_agent2,col_agent2) = self.tocellcoord[self.currstate[1]]
-            # self.occupancy_visual[row_agent2,col_agent2,0] = 0
-            # self.occupancy_visual[row_agent2,col_agent2,1] = 255
-            # self.occupancy_visual[row_agent2,col_agent2,2] = 0
-
-
-            # # make the third agent's state blue for visual
-            # (row_agent3,col_agent3) = self.tocellcoord[self.currstate[2]]
-            # self.occupancy_visual[row_agent3,col_agent3,0] = 0
-            # self.occupancy_visual[row_agent3,col_agent3,1] = 0
-            # self.occupancy_visual[row_agent3,col_agent3,2] = 255
-
 
 
             reward = np.sum(rewards)
 
-        # return reward, self.occupancy_visual, done, None     
-        return reward, tuple(nextcells), done, None 
+            self.step_count += 1
+
+        # If all goals were discovered, end episode
+        done = len(self.discovered_goals) == len(self.goals)
+
+           
+        return reward, self.currstate, done, None 
 
     def neighbouringState(self,agent,action): # agent \in {0,1,2..}
         agent_curr_state = self.currstate[agent] 
@@ -307,12 +288,176 @@ wwwwwwwwwwwww
 
         return y_list
 
-    # def _render(self, mode='state_pixel_rgb', close=False):
-    #     plt.imshow(self.occupancy_visual)
-    #     plt.show()
+
+    def encode(self):
+            """
+            Generates an array encoding of the environment
+            Encoding key:
+            empty               : 0
+            wall                : 1
+            agent               : 2
+            discovered goal     : 10
+            undiscovered goal   : 100
+            Agents can overlap with goals. This is indicated by keys (12 or 102).
+            """
+
+            # Start from occupancy
+            encoding = self.occupancy.copy();
+
+            # Add goals
+            for g in self.goals:
+                if g in self.discovered_goals:
+                    encoding[self.tocellcoord[g]] += 10
+                else:
+                    encoding[self.tocellcoord[g]] += 100
+
+            # Add agents
+            for pos in self.currstate:
+                encoding[self.tocellcoord[pos]] += 2
+
+            return encoding
+
+    def render(self, mode='human', close=False):
+        """
+        Render the whole-grid human view
+        """
+
+        if close:
+            if self.grid_render:
+                self.grid_render.close()
+            return
+
+        if self.grid_render is None:
+            self.grid_render = Renderer(
+                self.width * CELL_PIXELS,
+                self.height * CELL_PIXELS,
+                True if mode == 'human' else False
+            )
+
+        r = self.grid_render
+
+        r.beginFrame()
+
+        # Render the whole grid
+        self._render_grid(r, CELL_PIXELS)
+
+        #Draw agents
+        for pos in self.currstate:
+
+            loc = self.tocellcoord[pos]
+
+            # Draw the agent
+            r.push()
+            r.translate(
+                CELL_PIXELS * (loc[1] + 0.5),
+                CELL_PIXELS * (loc[0] + 0.5)
+            )
+            r.setLineColor(255, 0, 0)
+            r.setColor(255, 0, 0)
+            r.drawCircle(0,0,12)
+            r.pop()
 
 
+        r.endFrame()
 
+        if mode == 'rgb_array':
+            return r.getArray()
+        elif mode == 'pixmap':
+            return r.getPixmap()
+
+        return r
+
+
+    def _render_grid(self, r, tile_size):
+        """
+        Render this grid at a given scale
+        :param r: target renderer object
+        :param tile_size: tile size in pixels
+        """
+
+        assert r.width == self.width * tile_size
+        assert r.height == self.height * tile_size
+
+        # Total grid size at native scale
+        widthPx = self.width * CELL_PIXELS
+        heightPx = self.height * CELL_PIXELS
+
+        r.push()
+
+        # Internally, we draw at the "large" full-grid resolution, but we
+        # use the renderer to scale back to the desired size
+        r.scale(tile_size / CELL_PIXELS, tile_size / CELL_PIXELS)
+
+        # Draw the background of the in-world cells black
+        r.fillRect(
+            0,
+            0,
+            widthPx,
+            heightPx,
+            0, 0, 0
+        )
+
+        # Draw grid lines
+        r.setLineColor(100, 100, 100)
+        for rowIdx in range(0, self.height):
+            y = CELL_PIXELS * rowIdx
+            r.drawLine(0, y, widthPx, y)
+        for colIdx in range(0, self.width):
+            x = CELL_PIXELS * colIdx
+            r.drawLine(x, 0, x, heightPx)
+
+        # Render the grid
+
+        grid = self.encode()
+
+        for j in range(0, self.width):
+            for i in range(0, self.height):
+                cell = grid[i,j]
+                if cell == 0:
+                    continue
+
+                r.push()
+                r.translate(j * CELL_PIXELS, i * CELL_PIXELS)
+                if cell == 1:
+                    self._render_wall(r)
+                elif cell == 10 or cell == 12:
+                    self._render_goal(r, discovered=True)
+                elif cell == 100 or cell == 102:
+                    self._render_goal(r, discovered=False)
+                r.pop()
+
+        r.pop()
+
+    @staticmethod
+    def _render_wall(r):
+        c = np.array([100, 100, 100])       # Grey
+
+        r.setLineColor(c[0], c[1], c[2])
+        r.setColor(c[0], c[1], c[2])
+
+        r.drawPolygon([
+            (0          , CELL_PIXELS),
+            (CELL_PIXELS, CELL_PIXELS),
+            (CELL_PIXELS,           0),
+            (0          ,           0)
+        ])
+
+    @staticmethod
+    def _render_goal(r, discovered=False):
+        if not discovered:
+            c = np.array([0, 255, 0])       # Bright green
+        else:
+            c = np.array([0, 100, 0])       # Dull green
+
+        r.setLineColor(c[0], c[1], c[2])
+        r.setColor(c[0], c[1], c[2])
+
+        r.drawPolygon([
+            (0          , CELL_PIXELS),
+            (CELL_PIXELS, CELL_PIXELS),
+            (CELL_PIXELS,           0),
+            (0          ,           0)
+        ])
 
 
 
