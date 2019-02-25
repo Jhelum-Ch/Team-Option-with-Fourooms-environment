@@ -65,10 +65,13 @@ class DOC:
 			# for each agent sample from termination. This gives a boolean value representing whether the option terminates
 			terminate = options[option].termination.sample(state)
 			
-			# make the options that terminate available
-			if terminate:
-				options[option].available = True
+			# # make the options that terminate available
+			# if terminate:
+			# 	options[option].available = True
 			terminations.append(terminate)
+			
+		print('termination : ', terminations)
+		print('previous options :', joint_option)
 		
 		# available_options = [option.optionID for option in options if option.available]
 		
@@ -76,9 +79,34 @@ class DOC:
 		if not np.sum(terminations):
 			return joint_option
 			
-		# if at least one of the agent is terminating, sample a joint option from mu_policy that conforms with the
-		# non-terminating options
-		#TODO : account for options that did not terminate and the available options
+		# # if at least one of the agent is terminating, sample a joint option from mu_policy that conforms with the
+		# # non-terminating options
+		# #To account for options that did not terminate and the available options
+		# feasible_joint_option = [None, None, None]
+		# for idx, term in enumerate(terminations):
+		# 	if not term:
+		# 		feasible_joint_option[idx] = joint_option[idx]
+		#
+		# selected = []
+		# candidates = self.mu_policy.weights[tuple(np.sort(joint_state))]
+		# print('candidates:',candidates)
+		# # print('from mu policy :', self.mu_policy.weights[tuple(np.sort(joint_state))])
+		# for candidate in candidates:
+		# 	condition = True
+		# 	for i, fe in enumerate(feasible_joint_option):
+		# 		if not fe is None:
+		# 			if not fe == candidate[i]:
+		# 				condition = False
+		# 				break
+		# 	if condition:
+		# 		selected.append(candidate)
+		#
+		# print(selected)
+		
+		# terminate all the options and make them available
+		for option in joint_option:
+			options[option].available = True
+		
 		sampled_joint_option  = self.mu_policy.sample(joint_state = tuple(np.sort(joint_state)))
 		
 		# make the options unavailable
