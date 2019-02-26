@@ -70,8 +70,8 @@ class DOC:
 			# 	options[option].available = True
 			terminations.append(terminate)
 			
-		print('termination : ', terminations)
-		print('previous options :', joint_option)
+		# print('termination : ', terminations)
+		# print('previous options :', joint_option)
 		
 		# available_options = [option.optionID for option in options if option.available]
 		
