@@ -180,14 +180,17 @@ class Trainer(object):
 				
 				itr_reward.append(cum_reward)
 				if not iteration%30:
-					plotReward(itr_reward,'iterations','cumulative reward',self.expt_folder, 'iteration_reward.png')
+					plotReward(itr_reward,'iterations','cumulative reward',self.expt_folder,
+							   'iteration_reward_'+ str(episode) +'.png')
 				
 				if done:
 					break
 					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
 			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
-					   'single_episode_reward_per_episode.png')
+					   'reward_per_episode.png')
+			
+			#TODO: save checkpoint
 	
 		
 	
