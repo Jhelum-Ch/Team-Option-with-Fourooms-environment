@@ -21,7 +21,7 @@ if sys.version_info[0] < 3:
 # Size in pixels of a cell in the full-scale human view
 CELL_PIXELS = 32
 
-class FourroomsMA():
+class FourroomsMA(gym.Env):
 
     #metadata = {'render.modes': ['state_pixel_rgb']} 
 
