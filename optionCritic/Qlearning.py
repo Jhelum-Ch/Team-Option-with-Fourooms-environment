@@ -48,6 +48,10 @@ class IntraOptionQLearning:
 			# calculate values for each of these joint options. One can call getQvalue here recursively
 			all_Q = {option : self.getQvalue(joint_state, option) for option in all_joint_options}
 			
+			if not all_Q:
+				return 0	# accounts for advantage function when Q(s,o) has never been called before for any o
+				# import  pdb; pdb.set_trace()
+			
 			# return the maximum value and corresponding joint state
 			max_idx, max_value = max(all_Q.items(), key=operator.itemgetter(1))
 			
@@ -81,8 +85,8 @@ class IntraOptionQLearning:
 																						  joint_option))
 			
 			self.last_value = current_Q
-			self.last_joint_option = tuple(np.sort(joint_state))
-			self.last_joint_state = tuple(np.sort(joint_option))
+			self.last_joint_option = tuple(np.sort(joint_option))
+			self.last_joint_state = tuple(np.sort(joint_state))
 
 		# Dense gradient update step
 		tderror = update_target - self.last_value
@@ -92,7 +96,7 @@ class IntraOptionQLearning:
 
 
 class IntraOptionActionQLearning:
-	def __init__(self, discount, lr, terminations, weights, qbigomega):
+	def __init__(self, discount, lr, terminations, qbigomega):
 		# self.n_agents = n_agents
 		self.discount = discount
 		self.lr = lr
@@ -153,3 +157,69 @@ class IntraOptionActionQLearning:
 		self.last_joint_state = joint_state
 		self.last_joint_option = joint_option
 		self.last_joint_action = joint_action
+		
+# class AgentQLearning:
+# 	def __init__(self, discount, lr, weights):
+# 		self.discount = discount
+# 		self.lr = lr
+# 		# n_options = params['agent']['n_options']
+# 		# n_actions = params['agent']['n_actions']
+# 		self.weights = weights	#oder of weights is option x state x action
+#
+# 	def start(self, joint_state, joint_option, joint_action):
+# 		self.last_joint_state = joint_state
+# 		self.last_joint_option = joint_option
+# 		self.last_joint_action = joint_action
+#
+# 	def value(self, state, option, action):
+# 		return self.weights[option, state, action]
+#
+# 	def update(self, joint_state, joint_option, joint_action, reward, done):
+# 		update_target = [reward] * len(joint_state)
+# 		if not done:
+# 			for idx, state, option in zip(range(len(joint_state)), joint_state, joint_option):
+# 				update_target[idx] += self.discount * np.max(self.weights[option, state, :])
+#
+# 		for idx, last_state, last_option, last_action in zip(range(len(self.last_joint_state)), self.last_joint_state,
+# 															 self.last_joint_option, self.last_joint_action):
+# 			tderror = update_target[idx] - self.value(last_state, last_option, last_action)
+# 			self.weights[last_option, last_state, last_action] += self.lr * tderror
+#
+# 		self.last_state = joint_state
+# 		self.last_option = joint_option
+# 		self.last_action = joint_action
+
+class AgentQLearning:
+	def __init__(self, discount, lr, options):
+		self.discount = discount
+		self.lr = lr
+		# n_options = params['agent']['n_options']
+		# n_actions = params['agent']['n_actions']
+		self.options = options  # oder of weights is option x state x action
+
+	def start(self, joint_state, joint_option, joint_action):
+		self.last_joint_state = joint_state
+		self.last_joint_option = joint_option
+		self.last_joint_action = joint_action
+
+	def value(self, state, option, action):
+		return self.options[option].policy.weights[state, action]
+
+	def update(self, joint_state, joint_option, joint_action, reward, done):
+		update_target = [reward] * len(joint_state)
+		if not done:
+			for idx, state, option in zip(range(len(joint_state)), joint_state, joint_option):
+				action_pmfs = self.options[option].policy.weights[state, :]
+				update_target[idx] += self.discount * np.max(action_pmfs)
+
+		for idx, last_state, last_option, last_action in zip(range(len(self.last_joint_state)), self.last_joint_state,
+															 self.last_joint_option, self.last_joint_action):
+			tderror = update_target[idx] - self.value(last_state, last_option, last_action)
+			self.options[last_option].policy.weights[last_state, last_action] += self.lr * tderror
+
+		self.last_state = joint_state
+		self.last_option = joint_option
+		self.last_action = joint_action
+		
+		
+		
