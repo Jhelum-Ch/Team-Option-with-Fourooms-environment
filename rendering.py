@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
 import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QColor, QPolygon
@@ -181,8 +177,4 @@ class Renderer:
         self.painter.drawPolygon(QPolygon(points))
 
     def fillRect(self, x, y, width, height, r, g, b, a=255):
-<<<<<<< HEAD
         self.painter.fillRect(QRect(x, y, width, height), QColor(r, g, b, a))
-=======
-        self.painter.fillRect(QRect(x, y, width, height), QColor(r, g, b, a))
->>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
