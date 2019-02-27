@@ -15,7 +15,7 @@ def main():
         "--env-name",
         dest="env_name",
         help="gym environment to load",
-        default='FourroomsMA-v0'
+        default='FourroomsMA-v1'
     )
     (options, args) = parser.parse_args()
 
