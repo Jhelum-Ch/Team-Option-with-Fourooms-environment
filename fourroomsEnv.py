@@ -21,9 +21,9 @@ if sys.version_info[0] < 3:
 # Size in pixels of a cell in the full-scale human view
 CELL_PIXELS = 32
 
+
 class FourroomsMA(gym.Env):
 
-    #metadata = {'render.modes': ['state_pixel_rgb']} 
 
     # Defines the atomic actions for the agents
     class Actions(IntEnum):
@@ -33,7 +33,6 @@ class FourroomsMA(gym.Env):
         left = 2
         right = 3
         # stay = 4
-
 
     def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty = -0.01, collision_penalty = -0.01):
         layout = """\
@@ -58,6 +57,8 @@ wwwwwwwwwwwww
         self.collision_penalty = collision_penalty
 
 
+
+
         # Action enumeration for this environment
         self.actions = FourroomsMA.Actions
 
@@ -67,11 +68,16 @@ wwwwwwwwwwwww
         self.step_count = 0
 
 
+
+
         # create occupancy matrix.
         # 0 : free cell
         # 1 : wall
         self.occupancy = np.array([list(map(lambda c: 1 if c == 'w' else 0, line)) for line in layout.splitlines()])
 
+
+        self.height = len(self.occupancy)
+        self.width = len(self.occupancy[0])
 
 
         # Intialize atomic actions, and action spaces both for individual agents and for the joint actions a = (a^0, a^1,..., a^n)
@@ -96,8 +102,8 @@ wwwwwwwwwwwww
         self.tocellnum = {}     # mapping: cell coordinates -> cell number
         self.tocellcoord = {}   # mapping: cell number -> cell coordinates
         cellnum = 0
-        for i in range(13):
-            for j in range(13):
+        for i in range(self.height):
+            for j in range(self.width):
                 if self.occupancy[i,j] == 0:
                     self.tocellnum[(i,j)] = cellnum
                     self.tocellcoord[cellnum] = (i, j)
@@ -111,6 +117,7 @@ wwwwwwwwwwwww
                             if len(s) == len(np.unique(s))]
 
         self.goals = [50, 62, 71, 98, 103]  # fixed goals
+
         self.goals.sort()                   # important if not already sorted in line above
         self.discovered_goals = []
         self.init_states = self.cell_list.copy()   # initial agent states
@@ -121,6 +128,8 @@ wwwwwwwwwwwww
 
         # Current real joint state of the environment.
         self.currstate = None
+
+
 
 
         # Render used to generate image frames
@@ -155,7 +164,13 @@ wwwwwwwwwwwww
 
     # reset the world with multiple agents
     def reset(self):
+
         self.step_count = 0
+
+
+        self.step_count = 0
+
+
         # Sample initial joint state (s_0,...,s_n) without collision
         initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
         for i in range(self.n_agents):
@@ -185,6 +200,7 @@ wwwwwwwwwwwww
             len(actions)) + ") does not match number of agents (" + str(self.n_agents) + ")"
 
         # Process movement based on real states (not belief)
+
 
         rewards = [0.] * self.n_agents
 
@@ -223,6 +239,7 @@ wwwwwwwwwwwww
                     nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
                     # rewards[i] += self.collision_penalty
 
+
             # check for inter-agent collisions:
             collisions = [c for c, count in Counter(nextcells).items() if count > 1]
             while(len(collisions) != 0):        # While loop needed to handle edge cases
@@ -230,7 +247,9 @@ wwwwwwwwwwwww
                     if nextcells[i] in collisions:
                         nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
 
+
                 collisions = [c for c, count in Counter(nextcells).items() if count > 1]
+
 
             for i in range(self.n_agents):
                 if nextcells[i] == self.agents[i].state:    # A collision happened for this agent
@@ -243,12 +262,15 @@ wwwwwwwwwwwww
                         self.discovered_goals.append(s)
                 #rewards[i] += broadcasts[i]*self.broadcast_penalty
 
+
             self.currstate = tuple(nextcells)
+
 
 
             reward = np.sum(rewards)
 
             self.step_count += 1
+
 
         # If all goals were discovered, end episode
         done = len(self.discovered_goals) == len(self.goals)
