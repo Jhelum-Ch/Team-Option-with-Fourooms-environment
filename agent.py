@@ -1,4 +1,4 @@
-from option import Option
+from optionCritic.option import Option
 
 # Agent for the FourRooms environment
 
