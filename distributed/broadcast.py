@@ -19,7 +19,35 @@ class Broadcast:
     #     return (self.agent.state in self.goals) or (Q0 < Q1)
 
 
-    def broadcastBasedOnQ(self, critic, reward, next_true_joint_state, sampled_curr_joint_state, joint_option,done):
+    # def broadcastBasedOnQ(self, critic, reward, next_true_joint_state, sampled_curr_joint_state, joint_option,done):
+    #     #self.next_true_joint_state = next_true_joint_state
+    #     #self.sampled_curr_joint_state = sampled_curr_joint_state
+    #     self.joint_option = joint_option
+    #     # self.terminations = terminations
+    #     self.done = done
+    #     # should take agentQ instead of critic
+    #     broadcasts = np.zeros(self.env.n_agents)
+    #     for agent in self.env.agents:
+    #         modified_current_joint_state = np.copy(sampled_curr_joint_state)
+    #         modified_current_joint_state[agent.ID] = next_true_joint_state[agent.ID]
+    #         # modified_current_joint_state = tuple(np.sort(modified_current_joint_state))
+
+    #         #critic = IntraOptionQLearning(params['env']['discount'], params['doc']['lr_Q'],self.terminations, option_weights)
+    #         critic1 = copy.deepcopy(critic)
+    #         Q_agent_with_broadcast = critic1.update(modified_current_joint_state, self.joint_option, reward+self.env.broadcast_penalty, self.done)
+    #         # q1 = critic1.update(modified_current_joint_state, self.joint_option, reward+self.env.broadcast_penalty, self.done)
+    #         # Q_agent_with_broadcast = q1.getQvalue(modified_current_joint_state, None, self.joint_option)
+
+    #         critic2 =copy.deepcopy(critic)
+    #         Q_agent_without_broadcast = critic2.update(modified_current_joint_state, self.joint_option, reward, self.done)
+    #         # q2 = critic2.update(modified_current_joint_state, self.joint_option, reward, self.done)
+    #         # Q_agent_without_broadcast = q2.getQvalue(modified_current_joint_state, None, self.joint_option)
+
+    #         broadcasts[agent.ID] = 1*((agent.state in self.env.goals) or (Q_agent_with_broadcast > Q_agent_without_broadcast))
+    #     return tuple(broadcasts)
+
+
+    def broadcastBasedOnQ(self, critic, reward, curr_true_joint_state, sampled_curr_joint_state, joint_option,done):
         #self.next_true_joint_state = next_true_joint_state
         #self.sampled_curr_joint_state = sampled_curr_joint_state
         self.joint_option = joint_option
@@ -29,7 +57,7 @@ class Broadcast:
         broadcasts = np.zeros(self.env.n_agents)
         for agent in self.env.agents:
             modified_current_joint_state = np.copy(sampled_curr_joint_state)
-            modified_current_joint_state[agent.ID] = next_true_joint_state[agent.ID]
+            modified_current_joint_state[agent.ID] = curr_true_joint_state[agent.ID]
             # modified_current_joint_state = tuple(np.sort(modified_current_joint_state))
 
             #critic = IntraOptionQLearning(params['env']['discount'], params['doc']['lr_Q'],self.terminations, option_weights)

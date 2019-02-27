@@ -34,7 +34,7 @@ class FourroomsMA(gym.Env):
         right = 3
         # stay = 4
 
-    def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty = -0.01, collision_penalty = -0.01):
+    def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty = -0.01, collision_penalty = -0.01, discount = 0.9):
         layout = """\
 wwwwwwwwwwwww
 w     w     w
@@ -55,6 +55,7 @@ wwwwwwwwwwwww
         self.goal_reward = goal_reward
         self.broadcast_penalty = broadcast_penalty
         self.collision_penalty = collision_penalty
+        self.discount = discount
 
 
 
