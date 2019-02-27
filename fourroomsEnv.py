@@ -17,13 +17,19 @@ from rendering import *
 if sys.version_info[0] < 3:
     print("Warning! Python 2 can lead to unpredictable behaviours. Please use Python 3 instead.")
 
+# Size in pixels of a cell in the full-scale human view
+CELL_PIXELS = 32
 
+<<<<<<< HEAD
 # Size in pixels of a cell in the full-scale human view
 CELL_PIXELS = 32
 
 class FourroomsMA():
 
     #metadata = {'render.modes': ['state_pixel_rgb']} 
+=======
+class FourroomsMA(gym.Env):
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
 
     # Defines the atomic actions for the agents
     class Actions(IntEnum):
@@ -33,7 +39,6 @@ class FourroomsMA():
         left = 2
         right = 3
         # stay = 4
-
 
     def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty = -0.01, collision_penalty = -0.01):
         layout = """\
@@ -57,7 +62,10 @@ wwwwwwwwwwwww
         self.broadcast_penalty = broadcast_penalty
         self.collision_penalty = collision_penalty
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
         # Action enumeration for this environment
         self.actions = FourroomsMA.Actions
 
@@ -66,13 +74,21 @@ wwwwwwwwwwwww
 
         self.step_count = 0
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
         # create occupancy matrix.
         # 0 : free cell
         # 1 : wall
         self.occupancy = np.array([list(map(lambda c: 1 if c == 'w' else 0, line)) for line in layout.splitlines()])
 
+<<<<<<< HEAD
 
+=======
+        self.height = len(self.occupancy)
+        self.width = len(self.occupancy[0])
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
 
         # Intialize atomic actions, and action spaces both for individual agents and for the joint actions a = (a^0, a^1,..., a^n)
         self.agent_actions = FourroomsMA.Actions
@@ -96,8 +112,8 @@ wwwwwwwwwwwww
         self.tocellnum = {}     # mapping: cell coordinates -> cell number
         self.tocellcoord = {}   # mapping: cell number -> cell coordinates
         cellnum = 0
-        for i in range(13):
-            for j in range(13):
+        for i in range(self.height):
+            for j in range(self.width):
                 if self.occupancy[i,j] == 0:
                     self.tocellnum[(i,j)] = cellnum
                     self.tocellcoord[cellnum] = (i, j)
@@ -111,6 +127,7 @@ wwwwwwwwwwwww
                             if len(s) == len(np.unique(s))]
 
         self.goals = [50, 62, 71, 98, 103]  # fixed goals
+
         self.goals.sort()                   # important if not already sorted in line above
         self.discovered_goals = []
         self.init_states = self.cell_list.copy()   # initial agent states
@@ -122,7 +139,10 @@ wwwwwwwwwwwww
         # Current real joint state of the environment.
         self.currstate = None
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
         # Render used to generate image frames
         self.grid_render = None
 
@@ -155,7 +175,13 @@ wwwwwwwwwwwww
 
     # reset the world with multiple agents
     def reset(self):
+<<<<<<< HEAD
         self.step_count = 0
+=======
+
+        self.step_count = 0
+
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
         # Sample initial joint state (s_0,...,s_n) without collision
         initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
         for i in range(self.n_agents):
@@ -186,6 +212,7 @@ wwwwwwwwwwwww
 
         # Process movement based on real states (not belief)
 
+<<<<<<< HEAD
         rewards = [0.] * self.n_agents
 
         reward = 0.
@@ -222,16 +249,62 @@ wwwwwwwwwwwww
                 else:
                     nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
                     # rewards[i] += self.collision_penalty
+=======
+        rewards = [0] * self.n_agents
 
-            # check for inter-agent collisions:
+        reward = 0
+
+        nextcells = [None] * self.n_agents
+        rand_nums = self.rng.uniform(size=self.n_agents)
+
+        for i in range(self.n_agents):
+
+            currcell = self.tocellcoord[self.agents[i].state]
+            act = actions[i]
+            direction = self.directions[act]
+
+            if rand_nums[i] > 1/3:  # pick action as intended
+                if self.occupancy[tuple(currcell + direction)] == 0:
+                    nextcells[i] = self.tocellnum[tuple(currcell+direction)]
+                else:
+                    nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
+                    # rewards[i] += self.collision_penalty
+
+            else:   # pick random action, except one initially intended
+                adj_cells = self.adjacent_to(currcell)      # returns list of tuples
+                adj_cells.remove(tuple(currcell+direction))
+
+                index = self.rng.choice(range(len(adj_cells)))
+                new_cell = adj_cells[index]
+
+                if self.occupancy[new_cell] == 0:
+                    nextcells[i] = self.tocellnum[new_cell]
+                else:
+                    nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
+                    # rewards[i] += self.collision_penalty
+
+        # check for inter-agent collisions:
+        collisions = [c for c, count in Counter(nextcells).items() if count > 1]
+        while(len(collisions) != 0):        # While loop needed to handle edge cases
+            for i in range(len(nextcells)):
+                if nextcells[i] in collisions:
+                    nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
+
             collisions = [c for c, count in Counter(nextcells).items() if count > 1]
-            while(len(collisions) != 0):        # While loop needed to handle edge cases
-                for i in range(len(nextcells)):
-                    if nextcells[i] in collisions:
-                        nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
 
-                collisions = [c for c, count in Counter(nextcells).items() if count > 1]
+        for i in range(self.n_agents):
+            if nextcells[i] == self.agents[i].state:    # A collision happened for this agent
+                rewards[i] += self.collision_penalty
+            else:
+                s = nextcells[i]                        # movement is valid
+                self.agents[i].state = s
+                if s in self.goals and s not in self.discovered_goals:
+                    # new goal discovered
+                    rewards[i] += self.goal_reward
+                    self.discovered_goals.append(s)
 
+<<<<<<< HEAD
             for i in range(self.n_agents):
                 if nextcells[i] == self.agents[i].state:    # A collision happened for this agent
                     rewards[i] += self.collision_penalty
@@ -242,17 +315,26 @@ wwwwwwwwwwwww
                         rewards[i] += self.goal_reward
                         self.discovered_goals.append(s)
                 #rewards[i] += broadcasts[i]*self.broadcast_penalty
+=======
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
 
-            self.currstate = tuple(nextcells)
+        self.currstate = tuple(nextcells)
 
+<<<<<<< HEAD
 
             reward = np.sum(rewards)
 
             self.step_count += 1
+=======
+        reward = np.sum(rewards)
+
+        self.step_count += 1
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
 
         # If all goals were discovered, end episode
         done = len(self.discovered_goals) == len(self.goals)
 
+<<<<<<< HEAD
            
         return reward, self.currstate, done, None 
 
@@ -267,6 +349,9 @@ wwwwwwwwwwwww
 
             return neighbouring_cell
 
+=======
+        return reward, done, None      # Observations are not returned; they need to be queried with broadcasts
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
 
 
     # get the list of common observation, y_list, based on the broadcast action of each agent
@@ -290,6 +375,7 @@ wwwwwwwwwwwww
 
 
     def encode(self):
+<<<<<<< HEAD
             """
             Generates an array encoding of the environment
             Encoding key:
@@ -316,6 +402,36 @@ wwwwwwwwwwwww
                 encoding[self.tocellcoord[pos]] += 2
 
             return encoding
+=======
+        """
+        Generates an array encoding of the environment
+        Encoding key:
+
+        empty               : 0
+        wall                : 1
+        agent               : 2
+        discovered goal     : 10
+        undiscovered goal   : 100
+
+        Agents can overlap with goals. This is indicated by keys (12 or 102).
+        """
+
+        # Start from occupancy
+        encoding = self.occupancy.copy();
+
+        # Add goals
+        for g in self.goals:
+            if g in self.discovered_goals:
+                encoding[self.tocellcoord[g]] += 10
+            else:
+                encoding[self.tocellcoord[g]] += 100
+
+        # Add agents
+        for pos in self.currstate:
+            encoding[self.tocellcoord[pos]] += 2
+
+        return encoding
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
 
     def render(self, mode='human', close=False):
         """
@@ -459,10 +575,15 @@ wwwwwwwwwwwww
             (0          ,           0)
         ])
 
+<<<<<<< HEAD
 
 
 register(
     id='FourroomsMA-v1',
+=======
+register(
+    id='FourroomsMA-v0',
+>>>>>>> 44da6fdd3cad98e1dba6f8162b525db4f95fc429
     entry_point='fourroomsEnv:FourroomsMA',
     timestep_limit=20000,
     reward_threshold=1,  # should we modify this?

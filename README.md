@@ -37,20 +37,21 @@ For the **Agent class**:
 3. `get_observation(broadcasts)` : takes a _List_ of broadcasts (one for each agent). Returns the observations y_t 
 (as a _List_) based on eq. (19). Observations only contain states, not actions. **Does not account for broadcasting penalty.**
 
-## Expected workflow
+## Workflow of `main.py`
 
 At time t, start with belief **b_t** (up to date). The transition towards s_(t+1) requires the following steps:
 
 1. Sample **s_t ~ b_t**
-2. Sample **a_t = [ a_t^j ~ pi^j(s_t) ]**
-3. Compute  **s_t+1 = s_t + a_t** assuming that the environment layout is known and that the transition is deterministic
-4. Call `step_reward, done, _ = step(actions)`.
-5. For all agents, determine if they broadcast based on eq. (18). Store decision in `broadcasts`, where _0 = no broadcast_ and _1 = broadcast_.
-6. Decrement the reward by `env.broadcast_penalty` for each broadcasting agent
-7. Call `y_t = env.get_observation(broadcasts)`
-8. Compute data **Samples** based on **y_t**, by filling the gaps from the belief. 
-9. Updtate belief **b_(t+1) <----- commbeliefupdate(b_t, Samples)**
-10. TD evaluation and Policy improvement
+2. Sample **a_t = [ a_t^j ~ pi^j(s_t) ]**.    2.1.  Sample **a_t,simu = [ a_t^j ~ pi^j(s_t) ]**, the simulated actions
+3. Compute  **s_t+1 = s_t + a_t,simu** assuming that the environment layout is known and that the transition is deterministic
+4. Call `step_reward, done, _ = env.step(actions)`.
+5. Check option termination based on **s_t+1** computed at step 3 and assign new options. Also force broadcast on termination.
+6. For all agents, determine if they broadcast based on eq. (18). Store decision in `broadcasts`, where _0 = no broadcast_ and _1 = broadcast_.
+7. Decrement the reward by `env.broadcast_penalty` for each broadcasting agent
+8. Call `y_t = env.get_observation(broadcasts)`
+9. Compute data **Samples** based on **y_t**, by filling the gaps from the belief. 
+10. Update belief **b_(t+1) <----- updateBeliefParameters(b_t, Samples)**
+11. TD evaluation and Policy improvement
 
 ## Design choices
 
