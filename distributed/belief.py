@@ -328,65 +328,155 @@ import copy
 from fourroomsEnv import FourroomsMA
 
 
+
+
 class MultinomialDirichletBelief:
-    def __init__(self, env, joint_observation, sample_count=10):
+    def __init__(self, env, alpha, sample_count=10):
         super(MultinomialDirichletBelief, self).__init__()
         self.env = copy.deepcopy(env)
         # self.env = env.deepcopy()
+        self.alpha = alpha
         # self.joint_observation = joint_observation
         self.sample_count = sample_count  # sample_count is for rejection sampling
         self.curr_joint_state = self.env.currstate
         self.states_list = self.env.states_list
+        self.counts = collections.Counter(self.states_list)
+
+
+        #self.alpha = 0.001 * np.ones(len(self.states_list))
         
-        self.alpha = 0.001 * np.ones(len(self.states_list))
-        # randomly pick an idx of alpha and make the peak of delta at it
-        idx = int(np.random.choice(range(len(self.states_list)), 1))  # uniformly choose a joint-state index
-        self.alpha[int(idx)] += 1.  # make a delta at the chosen state
+    def update(self,joint_observation):
+        #assert isinstance(counts, dict), "counts is a disctionary"
         
-        self.num_type = len(self.alpha)  # number of types
-    
-    def posteriorPMF(self):
-        counts = collections.Counter(self.states_list)
-        counts_vec = [counts.get(i, 0) for i in range(self.num_type)]
-        if [self.joint_observation[i] is None for i in range(len(self.joint_observation))]:
-            a = stats.dirichlet.rvs(self.alpha, size=1, random_state=1)
-            return a[0]  # return 1 random sample
+
+        self.joint_observation = joint_observation
+
         
-        elif [not self.joint_observation[i] is None for i in range(len(self.joint_observation))]:
-            # if all agents broadcast, set prosterior to delta
-            self.alpha = 0.001 * np.ones(len(self.states_list))
-            idx = np.random.choice(range(len(self.states_list)), 1)
-            self.alpha[int(idx)] += 1.
-            return self.alpha
+        # Set the counts vector zero
+        counts_vec = [self.counts.get(i, 0) for i in range(len(self.states_list))]
+
+        if False not in [self.joint_observation[i] is None for i in range(len(self.joint_observation))]:
+            counts_vec = counts_vec
+        elif True not in [self.joint_observation[i] is None for i in range(len(self.joint_observation))]:
+            observed_states = tuple([item[0] for item in self.joint_observation])
+
+            for item in self.states_list:
+                if item == observed_states:
+                    counts_vec[self.states_list.index(item)] += 10000
+                    break
+
         else:
-            list_of_not_none = [i for i in range(len(self.joint_observation)) if
+            idx_of_not_none = [i for i in range(len(self.joint_observation)) if
                                 self.joint_observation[i] != None]  # find indices of not None in y
-            
+
             ''' find list of keys in counts which has non-None components of y and all possible values
             for None component of y'''
-            
+
             b = []
-            for item in list(counts.keys()):
-                
+            for item in list(self.counts.keys()):
+
                 flag = 0
-                for i in list_of_not_none:
-                    if item[i] == self.joint_observation[i]:
+                for i in idx_of_not_none:
+                    if item[i] == self.joint_observation[i][0]:
                         flag += 1
-                if flag == len(list_of_not_none):
+                if flag == len(idx_of_not_none):
                     b.append(item)
-            
+
+            '''increase the count of all joint states whose components match with observation by 1. 
+            E.g. if joint observation is (1,None,20) then we increase the counts of states (1,0,20), (1,1,20), (1,2,20)...etc
+            by 1.'''
+
             for item in b:
-                counts[item] += 1
+                self.counts[item] += 10000
+                counts_vec[self.states_list.index(item)] += 10000
+                #print('item', item, 'index_item', self.states_list.index(item))
+            #print('counts_keys', list(counts.keys()))
+
+            '''Q: Instead of adding count 1 to all such states, should I sample a number from 1-13 (say 3) 
+            and increase the count of (1,3,20), keeping the counts of all other states as they were?'''
+
+            #counts_vec = [counts.get(i, 0) for i in range(len(states_list))]
+            #counts_vec = list(self.counts.values())
+
+
+        return MultinomialDirichletBelief(self.env, np.add(self.alpha,counts_vec))
+
+    def pmf(self):
+        a = stats.dirichlet.rvs(self.alpha, size=1, random_state=1)
+        return a[0]
+        #self.joint_observation = joint_observation
+        # #counts = collections.Counter(self.states_list)
+        # # Set the counts vector zero
+        # counts_vec = [counts.get(i, 0) for i in range(len(self.states_list))]
+
+        # if False not in [joint_observation[i] is None for i in range(len(joint_observation))]:
+        #     #self.alpha = 0.001 * np.ones(len(self.states_list))
+        #     # idx = int(np.random.choice(range(len(self.states_list)), 1))  # uniformly choose a joint-state index
+        #     # self.alpha[int(idx)] += 1.  # make a delta at the chosen state
+        #     a = stats.dirichlet.rvs(self.alpha, size=1, random_state=1)
+        #     return a[0] 
+        #     #alternatively
+        #     #a_flatten = [i for item in a for i in item]
+        #     #return a_flatten
+
+        # elif True not in [self.joint_observation[i] is None for i in range(len(self.joint_observation))]:
+        #     observed_states = tuple([item[0] for item in self.joint_observation])
+
+        #     #index of observed state in states_list
+        #     idx = self.states_list.index(observed_states)
+
+        #     # if all agents broadcast, set prosterior to delta
+        #     delta_dist = np.zeros(len(self.states_list))
+        #     delta_dist[int(idx)] += 1.
+
             
-            counts_vec = [counts.get(i, 0) for i in range(self.num_type)]
-            a = stats.dirichlet.rvs(np.add(self.alpha, counts_vec), size=1, random_state=1)
-            return a[0]  # return 1 random sample
+        #     #print(np.sum(alpha))
+        #     return delta_dist
+        # else:
+        #     list_of_not_none = [i for i in range(len(self.joint_observation)) if
+        #                         self.joint_observation[i] != None]  # find indices of not None in y
+
+        #     ''' find list of keys in counts which has non-None components of y and all possible values
+        #     for None component of y'''
+
+        #     b = []
+        #     for item in list(counts.keys()):
+
+        #         flag = 0
+        #         for i in list_of_not_none:
+        #             if item[i] == self.joint_observation[i][0]:
+        #                 flag += 1
+        #         if flag == len(list_of_not_none):
+        #             b.append(item)
+
+        #     '''increase the count of all joint states whose components match with observation by 1. 
+        #     E.g. if joint observation is (1,None,20) then we increase the counts of states (1,0,20), (1,1,20), (1,2,20)...etc
+        #     by 1.'''
+
+        #     for item in b:
+        #         counts[item] += 1
+        #     #print('counts_keys', list(counts.keys()))
+
+        #     '''Q: Instead of adding count 1 to all such states, should I sample a number from 1-13 (say 3) 
+        #     and increase the count of (1,3,20), keeping the counts of all other states as they were?'''
+
+        #     #counts_vec = [counts.get(i, 0) for i in range(len(states_list))]
+        #     counts_vec = list(counts.values())
+        #     #print('counts_vec_after', counts_vec)
+        #     self.alpha = 0.001 * np.ones(len(self.states_list))
+        #     # could also set self.alpha = np.zeros(len(self.states_list))
+        #     a = stats.dirichlet.rvs(np.add(self.alpha, counts_vec), size=1, random_state=1)
+        #     return a[0] 
+        #     #alternatively
+        #     #a_flatten = [i for item in a for i in item]
+        #     #return a_flatten
+        
     
-    def sampleJointState(self, joint_observation):  # sample one joint_state from posterior
-        self.joint_observation = joint_observation
-        sampled_state_idx = int(np.random.choice(range(len(self.states_list)), 1, p=self.posteriorPMF()))
+    def sampleJointState(self):  # sample one joint_state from posterior
+        #self.joint_observation = joint_observation
+        sampled_state_idx = int(np.random.choice(range(len(self.states_list)), 1, p=self.pmf()))
         return self.states_list[sampled_state_idx]
-    
+
     def rejectionSampling(self):
         
         # each agent rejects a sample from common-belief posterior based on its own true state
@@ -395,7 +485,7 @@ class MultinomialDirichletBelief:
         sample_count = 0
         rs = np.zeros(params['env']['n_agents'])
         while consistent is False and sample_count <= self.sample_count:
-            sampled_joint_state = self.sampleJointState()
+            sampled_joint_state = self.sampleJointState(self.joint_observation)
             for agent in range(params['env']['n_agents']):
                 # rejection sampling
                 rs[agent] = 1.0 * (true_joint_state[agent] == sampled_joint_state[
@@ -425,7 +515,7 @@ class MultinomialDirichletBelief:
         sample_count = 0
         rs = np.zeros(params['env']['n_agents'])
         while consistent is False and sample_count <= self.sample_count:
-            sampled_joint_state = self.sampleJointState()
+            sampled_joint_state = self.sampleJointState(self.joint_observation)
             for agent in range(params['env']['n_agents']):
                 # rejection sampling
                 rs[agent] = 1.0 * (true_joint_state[agent] in neighborhood[
@@ -438,3 +528,14 @@ class MultinomialDirichletBelief:
             sample_count += 1
         
         return sampled_joint_state
+
+
+# class updateBelief(MultinomialDirichletBelief):
+#     def __init__(self):
+#         super(updateBelief, self).__init__()
+
+#     def 
+
+
+
+
