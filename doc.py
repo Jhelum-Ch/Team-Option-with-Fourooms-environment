@@ -199,7 +199,7 @@ class DOC:
 			terminations.append(terminate)
 			
 		print('termination : ', terminations)
-		print('previous options :', joint_option)
+		#print('previous options :', joint_option)
 		
 		# available_options = [option.optionID for option in options if option.available]
 		
@@ -253,10 +253,14 @@ class DOC:
 			
 		return tuple(joint_action)
 	
-	def toBroadcast(self, next_true_joint_state, sampled_curr_joint_state, joint_option, done, critic, reward):
-		return self.broadcast.broadcastBasedOnQ(critic, reward, next_true_joint_state, sampled_curr_joint_state,
-												joint_option,done)
+	# def toBroadcast(self, next_true_joint_state, sampled_curr_joint_state, joint_option, done, critic, reward):
+	# 	return self.broadcast.broadcastBasedOnQ(critic, reward, next_true_joint_state, sampled_curr_joint_state,
+	# 											joint_option,done)
 	
+	def toBroadcast(self, curr_true_joint_state, sampled_curr_joint_state, joint_option, done, critic, reward):
+		return self.broadcast.broadcastBasedOnQ(critic, reward, curr_true_joint_state, sampled_curr_joint_state,
+												joint_option,done)
+
 	def evaluateOption(self, critic, action_critic, joint_state, joint_option, joint_action, reward,
 					   done, baseline=False):
 		# Critic update
@@ -266,7 +270,7 @@ class DOC:
 		critic_feedback = action_critic.getQvalue(joint_state, joint_option, joint_action)  # Q(s,o,a)
 		
 		if baseline:
-			critic_feedback -= critic.value(joint_state, joint_option)
+			critic_feedback -= critic.getQvalue(joint_state, joint_option)
 		return critic_feedback
 	
 	def improveOption(self, policy_obj, termination_obj, joint_state, joint_option, joint_action, critic_feedback):
