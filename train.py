@@ -24,7 +24,10 @@ class Trainer(object):
 			joint_state = self.env.reset()
 			joint_observation = joint_state
 			
-			self.belief = MultinomialDirichletBelief(self.env, joint_observation)
+			alpha = 0.001 * np.ones(len(self.env.states_list))
+			self.belief = MultinomialDirichletBelief(self.env, alpha)
+			
+			# self.belief = MultinomialDirichletBelief(self.env, joint_observation)
 			# sampled_joint_state = joint_state
 			
 			# create option pool
@@ -134,19 +137,25 @@ class Trainer(object):
 				# iv
 				joint_action = self.doc.chooseAction()
 				
+				for agent in self.env.agents:
+					agent.action = joint_action[agent.ID]
+				
 				# v
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
-				cum_reward += reward
+				# cum_reward += reward
 				
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
 				
 				# vii - viii
-				broadcasts = self.doc.toBroadcast(next_true_joint_state=next_joint_state,
-											 sampled_curr_joint_state=sampled_joint_state,
-											 joint_option=joint_option,
-											 done=done,
-											 critic=self.critic,
-											 reward=reward)
+				broadcasts = self.doc.toBroadcast(curr_true_joint_state=joint_state,
+												  sampled_curr_joint_state=sampled_joint_state,
+												  joint_option=joint_option,
+												  done=done,
+												  critic=self.critic,
+												  reward=reward)
+				
+				reward += np.sum([i * self.env.broadcast_penalty for i in broadcasts])
+				cum_reward += reward
 				
 				# ix
 				next_joint_observation = self.env.get_observation(broadcasts)
