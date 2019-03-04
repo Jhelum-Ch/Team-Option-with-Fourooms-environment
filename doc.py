@@ -125,9 +125,9 @@ class DOC:
 			
 		return tuple(joint_action)
 	
-	def toBroadcast(self, next_true_joint_state, sampled_curr_joint_state, joint_option, done, critic, reward):
-		return self.broadcast.broadcastBasedOnQ(critic, reward, next_true_joint_state, sampled_curr_joint_state,
-												joint_option,done)
+	def toBroadcast(self, curr_true_joint_state, sampled_curr_joint_state, joint_option, done, critic, reward):
+		return self.broadcast.broadcastBasedOnQ(critic, reward, curr_true_joint_state, sampled_curr_joint_state,
+												joint_option, done)
 	
 	def evaluateOption(self, critic, action_critic, joint_state, joint_option, joint_action, reward,
 					   done, baseline=False):
