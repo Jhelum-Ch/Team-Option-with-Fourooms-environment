@@ -21,9 +21,9 @@ if sys.version_info[0] < 3:
 # Size in pixels of a cell in the full-scale human view
 CELL_PIXELS = 32
 
-class FourroomsMA():
 
-    #metadata = {'render.modes': ['state_pixel_rgb']} 
+class FourroomsMA(gym.Env):
+
 
     # Defines the atomic actions for the agents
     class Actions(IntEnum):
@@ -34,8 +34,7 @@ class FourroomsMA():
         right = 3
         # stay = 4
 
-
-    def __init__(self, n_agents = 3, goal_reward = 1, broadcast_penalty = -0.01, collision_penalty = -0.01):
+    def __init__(self, n_agents = 3, goal_reward = 1., broadcast_penalty = -0.01, collision_penalty = -0.01, discount = 0.9):
         layout = """\
 wwwwwwwwwwwww
 w     w     w
@@ -56,6 +55,9 @@ wwwwwwwwwwwww
         self.goal_reward = goal_reward
         self.broadcast_penalty = broadcast_penalty
         self.collision_penalty = collision_penalty
+        self.discoount = discount
+
+
 
 
         # Action enumeration for this environment
@@ -67,11 +69,16 @@ wwwwwwwwwwwww
         self.step_count = 0
 
 
+
+
         # create occupancy matrix.
         # 0 : free cell
         # 1 : wall
         self.occupancy = np.array([list(map(lambda c: 1 if c == 'w' else 0, line)) for line in layout.splitlines()])
 
+
+        self.height = len(self.occupancy)
+        self.width = len(self.occupancy[0])
 
 
         # Intialize atomic actions, and action spaces both for individual agents and for the joint actions a = (a^0, a^1,..., a^n)
@@ -96,8 +103,8 @@ wwwwwwwwwwwww
         self.tocellnum = {}     # mapping: cell coordinates -> cell number
         self.tocellcoord = {}   # mapping: cell number -> cell coordinates
         cellnum = 0
-        for i in range(13):
-            for j in range(13):
+        for i in range(self.height):
+            for j in range(self.width):
                 if self.occupancy[i,j] == 0:
                     self.tocellnum[(i,j)] = cellnum
                     self.tocellcoord[cellnum] = (i, j)
@@ -111,6 +118,7 @@ wwwwwwwwwwwww
                             if len(s) == len(np.unique(s))]
 
         self.goals = [50, 62, 71, 98, 103]  # fixed goals
+
         self.goals.sort()                   # important if not already sorted in line above
         self.discovered_goals = []
         self.init_states = self.cell_list.copy()   # initial agent states
@@ -121,6 +129,8 @@ wwwwwwwwwwwww
 
         # Current real joint state of the environment.
         self.currstate = None
+
+
 
 
         # Render used to generate image frames
@@ -155,7 +165,10 @@ wwwwwwwwwwwww
 
     # reset the world with multiple agents
     def reset(self):
+
         self.step_count = 0
+
+
         # Sample initial joint state (s_0,...,s_n) without collision
         initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
         for i in range(self.n_agents):
@@ -185,6 +198,7 @@ wwwwwwwwwwwww
             len(actions)) + ") does not match number of agents (" + str(self.n_agents) + ")"
 
         # Process movement based on real states (not belief)
+
 
         rewards = [0.] * self.n_agents
 
@@ -223,32 +237,38 @@ wwwwwwwwwwwww
                     nextcells[i] = self.tocellnum[tuple(currcell)]     # wall collision
                     # rewards[i] += self.collision_penalty
 
+
             # check for inter-agent collisions:
+        collisions = [c for c, count in Counter(nextcells).items() if count > 1]
+        while(len(collisions) != 0):        # While loop needed to handle edge cases
+            for i in range(len(nextcells)):
+                if nextcells[i] in collisions:
+                    nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
+
+
             collisions = [c for c, count in Counter(nextcells).items() if count > 1]
-            while(len(collisions) != 0):        # While loop needed to handle edge cases
-                for i in range(len(nextcells)):
-                    if nextcells[i] in collisions:
-                        nextcells[i] = self.agents[i].state     # agent collided with another, so no movement
-
-                collisions = [c for c, count in Counter(nextcells).items() if count > 1]
-
-            for i in range(self.n_agents):
-                if nextcells[i] == self.agents[i].state:    # A collision happened for this agent
-                    rewards[i] += self.collision_penalty
-                else:
-                    s = nextcells[i]                        # movement is valid
-                    self.agents[i].state = s
-                    if s in self.goals and s not in self.discovered_goals:
-                        rewards[i] += self.goal_reward
-                        self.discovered_goals.append(s)
-                #rewards[i] += broadcasts[i]*self.broadcast_penalty
-
-            self.currstate = tuple(nextcells)
 
 
-            reward = np.sum(rewards)
+        for i in range(self.n_agents):
+            if nextcells[i] == self.agents[i].state:    # A collision happened for this agent
+                rewards[i] += self.collision_penalty
+            else:
+                s = nextcells[i]                        # movement is valid
+                self.agents[i].state = s
+                if s in self.goals and s not in self.discovered_goals:
+                    rewards[i] += self.goal_reward
+                    self.discovered_goals.append(s)
+            #rewards[i] += broadcasts[i]*self.broadcast_penalty
 
-            self.step_count += 1
+
+        self.currstate = tuple(nextcells)
+
+
+
+        reward = np.sum(rewards)
+
+        self.step_count += 1
+
 
         # If all goals were discovered, end episode
         done = len(self.discovered_goals) == len(self.goals)
