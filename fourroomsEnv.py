@@ -1,5 +1,5 @@
-import numpy as np
-from matplotlib import pyplot as plt
+# import numpy as np
+# from matplotlib import pyplot as plt
 import itertools
 from collections import Counter
 from enum import IntEnum
@@ -7,10 +7,10 @@ import gym
 from gym import core, spaces
 from gym.envs.registration import register
 from agent import Agent
-from optionCritic.option import Option
-from modelConfig import params
-from optionCritic.Qlearning import IntraOptionQLearning
-import copy
+# from optionCritic.option import Option
+# from modelConfig import params
+# from optionCritic.Qlearning import IntraOptionQLearning
+# import copy
 import sys
 from rendering import *
 
