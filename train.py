@@ -5,10 +5,8 @@ from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearn
 from distributed.belief import MultinomialDirichletBelief
 from optionCritic.gradients import TerminationGradient, IntraOptionGradient
 import numpy as np
-# import matplotlib
-# matplotlib.use('Agg')
-# import matplotlib.pyplot as plt
-from utils.viz import plotReward
+from utils.viz import plotReward, calcErrorInBelief
+from tensorboardX import SummaryWriter
 
 
 class Trainer(object):
@@ -16,6 +14,7 @@ class Trainer(object):
 		self.expt_folder = expt_folder
 		self.env = env
 		self.n_agents = params['env']['n_agents']
+		self.writer = SummaryWriter(log_dir=expt_folder)
 		
 	def train(self):
 		for _ in range(params['train']['n_runs']):
@@ -52,17 +51,17 @@ class Trainer(object):
 			# joint action
 			# joint_action = self.doc.chooseAction()
 			
-			self.critic = IntraOptionQLearning(discount=params['train']['discount'],
+			self.critic = IntraOptionQLearning(discount=params['env']['discount'],
 										  lr=params['train']['lr_critic'],
 										  terminations=terminations,
 										  weights=self.mu_policy.weights)
 			
-			self.action_critic = IntraOptionActionQLearning(discount=params['train']['discount'],
+			self.action_critic = IntraOptionActionQLearning(discount=params['env']['discount'],
 													   lr=params['train']['lr_action_critic'],
 													   terminations=terminations,
 													   qbigomega=self.critic)
 			
-			self.agent_q = AgentQLearning(discount=params['train']['discount'],
+			self.agent_q = AgentQLearning(discount=params['env']['discount'],
 									 lr=params['train']['lr_agent_q'],
 									 options=self.options)
 			
@@ -76,6 +75,8 @@ class Trainer(object):
 	def trainEpisodes(self):
 		
 		sum_of_rewards_per_episode = []
+		episode_length = []
+		avg_belief_error = []
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
@@ -132,6 +133,8 @@ class Trainer(object):
 			# done = False
 			cum_reward = 0
 			itr_reward = []
+			belief_error = []
+			
 			for iteration in range(params['env']['episode_length']):
 				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
 				# iv
@@ -185,12 +188,21 @@ class Trainer(object):
 				
 				joint_state = next_joint_state
 				joint_observation = next_joint_observation
-				sampled_joint_state = self.belief.sampleJointState(joint_observation) # iii
+				sampled_joint_state = self.belief.sampleJointState() # iii
+				
+				belief_error.append(calcErrorInBelief(self.env, joint_state, sampled_joint_state))
 				
 				itr_reward.append(cum_reward)
-				if not iteration%30:
+				if not iteration%30 or done:
 					plotReward(itr_reward,'iterations','cumulative reward',self.expt_folder,
 							   'iteration_reward_'+ str(episode) +'.png')
+					
+					plotReward(belief_error, 'iterations', 'error', self.expt_folder,
+							   'belief_error_' + str(episode) + '.png')
+					
+				# tensorboard plots
+				self.writer.add_scalar('reward_in_iteration', cum_reward, iteration)
+				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iteration)
 				
 				if done:
 					break
@@ -198,6 +210,23 @@ class Trainer(object):
 			sum_of_rewards_per_episode.append(itr_reward[-1])
 			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
 					   'reward_per_episode.png')
+			
+			episode_length.append(len(itr_reward))
+			print('episode length :', episode_length)
+			plotReward(episode_length, 'episodes', 'length', self.expt_folder,
+				   'episode_length.png')
+			
+			avg_belief_error.append(np.mean(belief_error))
+			plotReward(avg_belief_error, 'episodes', 'mean_belief_error', self.expt_folder,
+				   'mean_belief_error_per_episode.png')
+			
+			# tensorboard plots
+			self.writer.add_scalar('cumulative_reward', itr_reward[-1], episode)
+			self.writer.add_scalar('episode_length', len(itr_reward), episode)
+			self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
+			
+		
+			
 			
 			#TODO: save checkpoint
 	
