@@ -480,7 +480,7 @@ class MultinomialDirichletBelief:
         
         return sampled_joint_state
     
-    def estimated_feasible_state(self, agent_state, action = None): # agent \in {0,1,2..}
+    def estimated_feasible_state(self, agent_state, action = None): 
         feasible_state_list = np.zeros(params['agent']['n_actions'])
         currcell = self.env.tocellcoord[agent_state]
         if action is None:
@@ -504,12 +504,9 @@ class MultinomialDirichletBelief:
                 if self.env.occupancy[tuple(self.env.tocellcoord[obs[i][0]]+self.env.directions[obs[i][1]])] == 1:
                     other_actions = [action for action in self.env.actions if action != obs[i][1]]
                     chosen_action = np.random.choice(other_actions,1)
-                    print('other_actions',other_actions,'chosen_action',chosen_action[0])
-                    print('occupancy', self.env.occupancy[tuple(self.env.tocellcoord[obs[i][0]]+self.env.directions[chosen_action[0]])])
                     while self.env.occupancy[tuple(self.env.tocellcoord[obs[i][0]]+self.env.directions[chosen_action[0]])] == 1:
                         other_actions.remove(chosen_action[0])
                         chosen_action = np.random.choice(other_actions,1) 
-                        print('chosen',chosen_action)
                     next_est_state = self.env.tocellnum[tuple(self.env.tocellcoord[obs[i][0]]+self.env.directions[chosen_action[0]])]
                 else:
                     next_est_state = self.env.tocellnum[tuple(self.env.tocellcoord[obs[i][0]]+self.env.directions[obs[i][1]])]
