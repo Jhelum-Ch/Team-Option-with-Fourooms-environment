@@ -400,7 +400,7 @@ class MultinomialDirichletBelief:
 
 #         return MultinomialDirichletBelief(self.env, np.add(self.alpha,counts_vec))
     
-    def update(self, joint_observation, old_feasible_states): #old_feasible_states is a list of tuples/lists/tuples and lists
+    def update(self, joint_observation, old_feasible_states): #old_feasible_states is a list of integers/lists
         #assert isinstance(counts, dict), "counts is a disctionary"
         
 
