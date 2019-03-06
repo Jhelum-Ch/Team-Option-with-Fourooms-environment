@@ -451,6 +451,7 @@ class Trainer(object):
 			#
 			# belief = MultinomialDirichletBelief(self.env, joint_observation)
 			sampled_joint_state = joint_state
+			old_feasible_states = joint_state
 			#
 			# # create option pool
 			# options, mu_policy = createOptions(self.env)
@@ -533,7 +534,8 @@ class Trainer(object):
 				next_joint_observation = self.env.get_observation(broadcasts)
 				joint_observation = next_joint_observation
 
-				self.belief.update(joint_observation)
+
+				self.belief.update(joint_observation,old_feasible_states)
 				sampled_joint_state = self.belief.sampleJointState()  #iii
 				
 				print('joint_obs', joint_observation, 'true_joint_state', joint_state, 'sampled_joint_state', sampled_joint_state)
@@ -563,6 +565,7 @@ class Trainer(object):
 				joint_option = self.doc.chooseOptionOnTermination(self.options, joint_option, sampled_joint_state)
 				
 				joint_state = next_joint_state
+				old_feasible_states = belief.new_feasible_states(old_feasible_states,joint_observation)
 				# joint_observation = next_joint_observation
 				# sampled_joint_state = self.belief.sampleJointState(joint_observation) # iii
 				
