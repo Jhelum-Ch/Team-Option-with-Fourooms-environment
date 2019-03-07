@@ -35,9 +35,13 @@ class Trainer(object):
 			# put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# 'seed'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
-			joint_observation = joint_state
+			prev_joint_state = joint_state
+			joint_observation = [(joint_state[i],None) for i in range(self.env.n_agents)]
+			prev_joint_action = tuple([None for _ in range(self.env.n_agents)])
 			
-			belief = MultinomialDirichletBelief(self.env, joint_observation)
+			alpha = 0.001 * np.ones(len(self.env.states_list))
+
+			self.belief = MultinomialDirichletBelief(self.env, alpha)
 			sampled_joint_state= joint_state
 			old_feasible_states = joint_state
 			
@@ -100,12 +104,22 @@ class Trainer(object):
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
 				
 				# vii - viii
-				broadcasts = doc.toBroadcast(next_true_joint_state=next_joint_state,
-											 sampled_curr_joint_state=sampled_joint_state,
-											 joint_option=joint_option,
-											 done=done,
-											 critic=critic,
-											 reward=reward)
+
+				broadcasts = doc.toBroadcast(curr_true_joint_state = joint_state, 
+											 prev_sampled_joint_state = sampled_joint_state,
+											 prev_joint_obs = joint_observation,
+											 prev_true_joint_state = prev_joint_state, 
+											 prev_joint_action = prev_joint_action, 
+											 joint_option = joint_option, 
+											 done = done, 
+											 critic = critic, 
+											 reward = reward)
+				# broadcasts = doc.toBroadcast(next_true_joint_state=next_joint_state,
+				# 							 sampled_curr_joint_state=sampled_joint_state,
+				# 							 joint_option=joint_option,
+				# 							 done=done,
+				# 							 critic=critic,
+				# 							 reward=reward)
 				print('Broadcasts', broadcasts)
 				
 				# ix
@@ -134,12 +148,17 @@ class Trainer(object):
 				# xi B
 				joint_option = doc.chooseOptionOnTermination(options, joint_option, sampled_joint_state)
 				
+				prev_joint_state = joint_state
 				joint_state = next_joint_state
+
+				prev_joint_obs = joint_observation
 				joint_observation = next_joint_observation
 
+				prev_joint_action = joint_action
+
 				self.belief.update(joint_observation,old_feasible_states)
-				sampled_joint_state = belief.sampleJointState(joint_observation) # iii
-				old_feasible_states = belief.new_feasible_states(old_feasible_states,joint_observation)
+				sampled_joint_state = self.belief.sampleJointState() # iii
+				old_feasible_states = self.belief.new_feasible_state(old_feasible_states,joint_observation)
 				
 				itr_reward.append(cum_reward)
 				if not iteration%30:

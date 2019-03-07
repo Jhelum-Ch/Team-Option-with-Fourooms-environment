@@ -12,7 +12,7 @@ from modelConfig import params
 from optionCritic.Qlearning import IntraOptionQLearning
 import copy
 import sys
-from rendering import *
+#from rendering import *
 
 if sys.version_info[0] < 3:
     print("Warning! Python 2 can lead to unpredictable behaviours. Please use Python 3 instead.")
@@ -82,9 +82,9 @@ wwwwwwwwwwwww
 
 
         # Intialize atomic actions, and action spaces both for individual agents and for the joint actions a = (a^0, a^1,..., a^n)
-        self.agent_actions = FourroomsMA.Actions
-        self.action_space = spaces.Discrete(len(self.agent_actions))
-        self.joint_actions = list(itertools.product(range(len(self.agent_actions)), repeat=self.n_agents))
+        #self.agent_actions = FourroomsMA.Actions
+        #self.action_space = spaces.Discrete(len(self.agent_actions))
+        self.joint_actions = list(itertools.product(range(len(self.actions)), repeat=self.n_agents))
 
         # Initialize agents with a name (agent i) and an ID (i)
         self.agents = [Agent(ID = i, name = 'agent %d' % i) for i in range(self.n_agents)]
@@ -283,9 +283,9 @@ wwwwwwwwwwwww
         if self.occupancy[tuple(currcell+direction)] == 1:
             return None
         else:
-            neighbouring_cell = self.tocellnum[tuple(currcell+direction)]
+            neighbouring_state = self.tocellnum[tuple(currcell+direction)]
 
-            return neighbouring_cell
+            return neighbouring_state
 
 
 
@@ -296,7 +296,7 @@ wwwwwwwwwwwww
 
         for i in range(self.n_agents):
             if broadcasts[i] == 1:
-                y_list.append(self.agents[i].state)      # y_i = s^i_t if agent i broadcasts
+                y_list.append((self.agents[i].state,self.agents[i].action))      # y_i = (s^i_t,a^i_t) if agent i broadcasts
             else:
                 y_list.append(None)                      # y_i = None, otherwise
 

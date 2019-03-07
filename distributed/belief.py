@@ -438,6 +438,7 @@ class MultinomialDirichletBelief:
                 self.counts[item] += 10000
                 counts_vec[self.states_list.index(item)] += 10000
 
+        print('alpha_size', np.shape(self.alpha), 'counts_vec_size', np.shape(counts_vec))
 
         return MultinomialDirichletBelief(self.env, np.add(self.alpha,counts_vec))
 

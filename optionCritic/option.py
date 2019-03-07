@@ -63,7 +63,9 @@ def createOptions(env):
 	
 	options = []
 	for i in range(params['agent']['n_options']):
-		options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.agent_actions)), SigmoidTermination(
+		# options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.agent_actions)), SigmoidTermination(
+		# 	len(env.cell_list))))
+		options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.actions)), SigmoidTermination(
 			len(env.cell_list))))
 		
 	return options, mu_policy
