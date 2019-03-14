@@ -41,7 +41,8 @@ class Broadcast:
                     other_actions_for_other = [int(a) for a in self.env.actions]
                     chosen_action_for_other = prev_joint_obs[other_agent.ID][1]
                     while self.env.occupancy[tuple(self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]]+self.env.directions[int(chosen_action_for_other)])] == 1:
-                        other_actions_for_other.remove(prev_joint_obs[other_agent.ID][1])
+                        # other_actions_for_other.remove(prev_joint_obs[other_agent.ID][1])
+                        other_actions_for_other.remove(chosen_action_for_other)
                         chosen_action_for_other = np.random.choice(other_actions_for_other,1) 
 
                     estimated_curr_joint_state[other_agent.ID] = self.env.tocellnum[tuple(self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]] + self.env.directions[int(chosen_action_for_other)])]

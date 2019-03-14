@@ -502,6 +502,7 @@ class MultinomialDirichletBelief:
         for i in range(len((obs))):
            
             if obs[i] is not None:
+                print('obs',obs[i])
                 if self.env.occupancy[tuple(self.env.tocellcoord[obs[i][0]]+self.env.directions[obs[i][1]])] == 1:
                     other_actions = [action for action in self.env.actions if action != obs[i][1]]
                     chosen_action = np.random.choice(other_actions,1)
