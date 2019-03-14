@@ -120,14 +120,16 @@ class DOC:
 		joint_action = []
 		for agent in self.env.agents:
 			action = self.options[agent.option].policy.sample(agent.state)
+			agent.action = action
 			# print('agent ID:', agent.ID, 'state:', agent.state, 'option ID:', agent.option, 'action:', action)
 			joint_action.append(action)
 			
 		return tuple(joint_action)
 	
-	def toBroadcast(self, curr_true_joint_state, sampled_curr_joint_state, joint_option, done, critic, reward):
-		return self.broadcast.broadcastBasedOnQ(critic, reward, curr_true_joint_state, sampled_curr_joint_state,
-												joint_option, done)
+	
+	def toBroadcast(self, curr_true_joint_state, prev_sampled_joint_state, prev_joint_obs, prev_true_joint_state, prev_joint_action, joint_option, done, critic, reward):
+		return self.broadcast.broadcastBasedOnQ(critic, reward, curr_true_joint_state, prev_sampled_joint_state, prev_joint_obs, 
+													prev_true_joint_state, prev_joint_action, joint_option,done)
 	
 	def evaluateOption(self, critic, action_critic, joint_state, joint_option, joint_action, reward,
 					   done, baseline=False):
