@@ -487,7 +487,7 @@ class MultinomialDirichletBelief:
         if action is None:
             for action in range(params['agent']['n_actions']):
                 direction = self.env.directions[action]
-                if env.occupancy[tuple(currcell+direction)] != 1:
+                if self.env.occupancy[tuple(currcell+direction)] != 1:
                     feasible_state_list[action] = self.env.tocellnum[tuple(currcell+direction)]
             return [item for item in feasible_state_list if item != 0.]
         else:
