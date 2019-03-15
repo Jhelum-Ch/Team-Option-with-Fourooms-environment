@@ -72,7 +72,7 @@ class Broadcast:
             #critic = IntraOptionQLearning(params['env']['discount'], params['doc']['lr_Q'],self.terminations, option_weights)
             
             estimated_curr_joint_state = [int(item) for item in estimated_curr_joint_state] # make th entries integer
-            print('estimated_curr_joint_state', estimated_curr_joint_state)
+            # print('estimated_curr_joint_state', estimated_curr_joint_state)
             critic1 = copy.deepcopy(critic)
             Q_agent_with_broadcast = critic1.update(tuple(estimated_curr_joint_state), self.joint_option, reward+self.env.broadcast_penalty, self.done)
             # q1 = critic1.update(modified_current_joint_state, self.joint_option, reward+self.env.broadcast_penalty, self.done)
