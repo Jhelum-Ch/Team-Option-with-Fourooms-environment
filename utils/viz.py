@@ -29,5 +29,22 @@ def calcErrorInBelief(env, true_joint_state, sampled_joint_state):
 	
 	return error
 
+def calcCriticValue(nested_dict):
+	keys = list(nested_dict.keys())
+	total_Q = 0
+	for key in keys:
+		total_Q += sum(nested_dict[key].values())
+	return total_Q
+
+def calcActionCriticValue(nested_dict):
+	option_keys = list(nested_dict.keys())
+	total_Q = 0
+	for o_key in option_keys:
+		action_keys = list(nested_dict[o_key].keys())
+		for a_key in action_keys:
+			total_Q += sum(nested_dict[o_key][a_key].values())
+	return total_Q
+	
+
 
 #TODO : visualize options
