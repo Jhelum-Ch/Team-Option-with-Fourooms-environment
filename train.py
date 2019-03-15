@@ -5,7 +5,7 @@ from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearn
 from distributed.belief import MultinomialDirichletBelief
 from optionCritic.gradients import TerminationGradient, IntraOptionGradient
 import numpy as np
-from utils.viz import plotReward, calcErrorInBelief
+from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue
 from tensorboardX import SummaryWriter
 
 
@@ -81,7 +81,6 @@ class Trainer(object):
 			# # 'seed'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
 			prev_joint_state = joint_state
-			# import pdb; pdb.set_trace()
 			joint_observation = [(joint_state[i],None) for i in range(self.env.n_agents)]
 			prev_joint_action = tuple([None for _ in range(self.env.n_agents)])
 			
@@ -222,6 +221,12 @@ class Trainer(object):
 				if done:
 					break
 					
+				critic_Q = calcCriticValue(self.critic.weights)
+				action_critic_Q = calcActionCriticValue(self.action_critic.weights)
+				
+				self.writer.add_scalar('Critic_Q_itr', critic_Q, iteration)
+				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iteration)
+					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
 			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
 					   'reward_per_episode.png')
@@ -239,8 +244,8 @@ class Trainer(object):
 			self.writer.add_scalar('cumulative_reward', itr_reward[-1], episode)
 			self.writer.add_scalar('episode_length', len(itr_reward), episode)
 			self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
-			
-		
+			self.writer.add_scalar('Critic_Q_episode', critic_Q, episode)
+			self.writer.add_scalar('Action_Critic_Q', action_critic_Q, episode)
 			
 			
 			#TODO: save checkpoint
