@@ -430,15 +430,17 @@ class MultinomialDirichletBelief:
                     list_final.append(list_int)
                 else:
                     list_int = []
-                    list_int.append(self.joint_observation[i][0])
+                    list_int.append(int(self.joint_observation[i][0]))
                     list_final.append(list_int)
             updated_states_list = list(product(*list_final))
 
             for item in updated_states_list:
+                # import pdb; pdb.set_trace()
+                item = tuple([int(i) for i in item])
                 self.counts[item] += 10000
                 counts_vec[self.states_list.index(item)] += 10000
 
-        print('alpha_size', np.shape(self.alpha), 'counts_vec_size', np.shape(counts_vec))
+        # print('alpha_size', np.shape(self.alpha), 'counts_vec_size', np.shape(counts_vec))
 
         return MultinomialDirichletBelief(self.env, np.add(self.alpha,counts_vec))
 
@@ -462,14 +464,14 @@ class MultinomialDirichletBelief:
                 #self.env.currstate = self.curr_joint_state
                 neighboring_state = self.env.neighbouringState(agent, action)
                 neighborhood[agent, action] = neighboring_state
-        print('neighborhood', neighborhood)
+        # print('neighborhood', neighborhood)
         # each agent rejects a sample from common-belief posterior based on its own neighborhood
         consistent = False
         sample_count = 0
         rs = np.zeros(params['env']['n_agents'])
         while consistent is False and sample_count <= self.sample_count:
             sampled_joint_state = self.sampleJointState()
-            print(sampled_joint_state)
+            # print(sampled_joint_state)
             for agent in range(params['env']['n_agents']):
                 # rejection sampling
                 rs[agent] = 1.0 * (sampled_joint_state[agent] in neighborhood[
@@ -487,13 +489,13 @@ class MultinomialDirichletBelief:
         if action is None:
             for action in range(params['agent']['n_actions']):
                 direction = self.env.directions[action]
-                if env.occupancy[tuple(currcell+direction)] != 1:
+                if self.env.occupancy[tuple(currcell+direction)] != 1:
                     feasible_state_list[action] = self.env.tocellnum[tuple(currcell+direction)]
-            return [item for item in feasible_state_list if item != 0.]
+            return [int(item) for item in feasible_state_list if item != 0.]
         else:
             direction = self.env.directions[action]
             next_state = self.env.tocellnum[tuple(currcell+direction)]
-        return next_state 
+        return int(next_state)
 
 
     def new_feasible_state(self, old_feasible_states,obs): #old_feasible_states can be either list of integers or list of lists
@@ -502,6 +504,7 @@ class MultinomialDirichletBelief:
         for i in range(len((obs))):
            
             if obs[i] is not None:
+                # print('obs',obs[i])
                 if self.env.occupancy[tuple(self.env.tocellcoord[obs[i][0]]+self.env.directions[obs[i][1]])] == 1:
                     other_actions = [action for action in self.env.actions if action != obs[i][1]]
                     chosen_action = np.random.choice(other_actions,1)
@@ -518,7 +521,7 @@ class MultinomialDirichletBelief:
                     new_feasible_states.append(new_list)
                 else: #if isinstance(old_feasible_states[i],list)
                     new_list = [self.estimated_feasible_state(s) for s in old_feasible_states[i]] #new_list is list of list
-                    flatten_new_list = [s for item in new_list for s in item]
+                    flatten_new_list = [int(s) for item in new_list for s in item]
                     new_feasible_states.append(list(set(flatten_new_list)) )
         return new_feasible_states
 

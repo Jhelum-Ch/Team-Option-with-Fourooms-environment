@@ -1,3 +1,4 @@
+from optionCritic.option import Option
 
 # Agent for the FourRooms environment
 
@@ -11,4 +12,7 @@ class Agent:
         self.state = None
         # Current running option o^j (index corresponding to option in option space O)
         self.option = None
+
+        self.action = None
+        
         self.broadcast = 0
