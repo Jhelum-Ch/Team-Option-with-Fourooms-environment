@@ -159,7 +159,7 @@ class Trainer(object):
 											 prev_joint_action = prev_joint_action, 
 											 joint_option = joint_option, 
 											 done = done, 
-											 critic = critic, 
+											 critic = self.critic,
 											 reward = reward)
 				
 				reward += np.sum([i * self.env.broadcast_penalty for i in broadcasts])
