@@ -81,6 +81,7 @@ class Trainer(object):
 			# # 'seed'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
 			prev_joint_state = joint_state
+			# import pdb; pdb.set_trace()
 			joint_observation = [(joint_state[i],None) for i in range(self.env.n_agents)]
 			prev_joint_action = tuple([None for _ in range(self.env.n_agents)])
 			
@@ -138,7 +139,7 @@ class Trainer(object):
 			belief_error = []
 			
 			for iteration in range(params['env']['episode_length']):
-				#print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
+				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
 				# iv
 				joint_action = self.doc.chooseAction()
 				
@@ -198,9 +199,10 @@ class Trainer(object):
 				joint_observation = next_joint_observation
 
 				prev_joint_action = joint_action
-
+				
 				self.belief.update(joint_observation,old_feasible_states)
 				sampled_joint_state = self.belief.sampleJointState() # iii
+				
 				old_feasible_states = self.belief.new_feasible_state(old_feasible_states,joint_observation)
 				
 				belief_error.append(calcErrorInBelief(self.env, joint_state, sampled_joint_state))
