@@ -6,6 +6,7 @@ from distributed.belief import MultinomialDirichletBelief
 from optionCritic.gradients import TerminationGradient, IntraOptionGradient
 import numpy as np
 from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue
+from utils.misc import saveModelandMetrics
 from tensorboardX import SummaryWriter
 
 
@@ -75,10 +76,11 @@ class Trainer(object):
 		sum_of_rewards_per_episode = []
 		episode_length = []
 		avg_belief_error = []
+		iterations = 0
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
-			# # 'seed'] in modelConfig remains unchanged
+			# # 'f'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
 			prev_joint_state = joint_state
 			joint_observation = [(joint_state[i],None) for i in range(self.env.n_agents)]
@@ -215,8 +217,9 @@ class Trainer(object):
 							   'belief_error_' + str(episode) + '.png')
 					
 				# tensorboard plots
-				self.writer.add_scalar('reward_in_iteration', cum_reward, iteration)
-				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iteration)
+				iterations += 1
+				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
+				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
 				
 				if done:
 					break
@@ -241,11 +244,14 @@ class Trainer(object):
 				   'mean_belief_error_per_episode.png')
 			
 			# tensorboard plots
-			self.writer.add_scalar('cumulative_reward', itr_reward[-1], episode)
+			self.writer.add_scalar('cumulative_reward', cum_reward, episode)
 			self.writer.add_scalar('episode_length', len(itr_reward), episode)
 			self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
 			self.writer.add_scalar('Critic_Q_episode', critic_Q, episode)
 			self.writer.add_scalar('Action_Critic_Q', action_critic_Q, episode)
+			
+			# Save model
+			saveModelandMetrics(self)
 			
 			
 			#TODO: save checkpoint
