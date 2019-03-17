@@ -1,11 +1,11 @@
 import numpy as np
 from scipy.special import expit
-from modelConfig import params
+from modelConfig import seed
 
 
 class SigmoidTermination:
     def __init__(self, n_states):
-        self.rng = params['train']['seed']
+        self.rng = seed
         self.weights = np.zeros(n_states)
 
     def pmf(self, phi):
