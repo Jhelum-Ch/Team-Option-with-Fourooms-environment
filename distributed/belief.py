@@ -522,6 +522,6 @@ class MultinomialDirichletBelief:
                 else: #if isinstance(old_feasible_states[i],list)
                     new_list = [self.estimated_feasible_state(s) for s in old_feasible_states[i]] #new_list is list of list
                     flatten_new_list = [int(s) for item in new_list for s in item]
-                    new_feasible_states.append(list(set(flatten_new_list)) )
+                    new_feasible_states.append(list(set(flatten_new_list)))
         return new_feasible_states
 
