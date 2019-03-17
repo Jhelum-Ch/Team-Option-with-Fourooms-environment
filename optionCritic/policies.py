@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.misc import logsumexp
-from modelConfig import params
+from modelConfig import params, seed
 
 
 class SoftmaxOptionPolicy:
@@ -8,7 +8,7 @@ class SoftmaxOptionPolicy:
 		'''
 		:param temp: lower temperature means uniform distribution, higher means delta
 		'''
-		self.rng = params['train']['seed']
+		self.rng = seed
 		
 		self.weights = weights
 		# weights is a dictionary keeping track of Q(s,o) values. This is the weight dictionary of IntraOptionQLearning
@@ -86,7 +86,7 @@ class SoftmaxActionPolicy:
 		:param n_choices: choices over which pmf spreads choice can be either number of primitive actions or options
 		:param temp: lower temperature means uniform distribution, higher means delta
 		'''
-		self.rng = params['train']['seed']
+		self.rng = seed
 		self.weights = np.zeros((n_states, n_choices))  # we assume that n_features and
 		# n_actions for all agents are same
 		self.temp = temp
