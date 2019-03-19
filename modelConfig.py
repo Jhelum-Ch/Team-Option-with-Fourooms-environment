@@ -4,7 +4,7 @@ params = {
 	'env'	:	{
 		'n_agents'			:	3,
 		'goal_reward' 		:	 1,
-		'broadcast_penalty'	:  -0.001,
+		'broadcast_penalty'	:  -0.003,
 		'collision_penalty' :  -0.01,
 		'episode_length'	: 	500,
 		'no_broadcast_threshold'	: 0.01,	#TODO : tune
