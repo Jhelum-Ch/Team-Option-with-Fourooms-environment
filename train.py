@@ -5,7 +5,8 @@ from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearn
 from distributed.belief import MultinomialDirichletBelief
 from optionCritic.gradients import TerminationGradient, IntraOptionGradient
 import numpy as np
-from utils.viz import plotReward, calcErrorInBelief
+from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue
+from utils.misc import saveModelandMetrics
 from tensorboardX import SummaryWriter
 
 
@@ -25,6 +26,9 @@ class Trainer(object):
 			
 			alpha = 0.001 * np.ones(len(self.env.states_list))
 			self.belief = MultinomialDirichletBelief(self.env, alpha)
+
+			# deliberation cost 
+			eta = params['train']['deliberation_cost']
 		
 			
 			# create option pool
@@ -75,10 +79,11 @@ class Trainer(object):
 		sum_of_rewards_per_episode = []
 		episode_length = []
 		avg_belief_error = []
+		iterations = 0
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
-			# # 'seed'] in modelConfig remains unchanged
+			# # 'f'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
 			prev_joint_state = joint_state
 			joint_observation = [(joint_state[i],None) for i in range(self.env.n_agents)]
@@ -136,9 +141,11 @@ class Trainer(object):
 			cum_reward = 0
 			itr_reward = []
 			belief_error = []
+
+			c = 0.0
 			
 			for iteration in range(params['env']['episode_length']):
-				#print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
+				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
 				# iv
 				joint_action = self.doc.chooseAction()
 				
@@ -147,6 +154,7 @@ class Trainer(object):
 				
 				# v
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
+				reward += reward + c
 				# cum_reward += reward
 				
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
@@ -189,7 +197,15 @@ class Trainer(object):
 								   )
 				
 				# xi B
-				joint_option = self.doc.chooseOptionOnTermination(self.options, joint_option, sampled_joint_state)
+				next_joint_option = self.doc.chooseOptionOnTermination(self.options, joint_option, sampled_joint_state)
+				currJO_ID = [o.optionID for o in joint_option]
+				nextJO_ID = [o.optionID for o in next_joint_option]
+				change_in_options = [currJO != nextJO for (currJO,nextJO) in zip(currJO_ID,nextJO_ID)]
+
+				c += eta*np.sum(change_in_options)
+				
+
+				joint_option = next_joint_option
 				
 				prev_joint_state = joint_state
 				joint_state = next_joint_state
@@ -198,9 +214,10 @@ class Trainer(object):
 				joint_observation = next_joint_observation
 
 				prev_joint_action = joint_action
-
+				
 				self.belief.update(joint_observation,old_feasible_states)
 				sampled_joint_state = self.belief.sampleJointState() # iii
+				
 				old_feasible_states = self.belief.new_feasible_state(old_feasible_states,joint_observation)
 				
 				belief_error.append(calcErrorInBelief(self.env, joint_state, sampled_joint_state))
@@ -214,11 +231,18 @@ class Trainer(object):
 							   'belief_error_' + str(episode) + '.png')
 					
 				# tensorboard plots
-				self.writer.add_scalar('reward_in_iteration', cum_reward, iteration)
-				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iteration)
+				iterations += 1
+				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
+				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
 				
 				if done:
 					break
+					
+				critic_Q = calcCriticValue(self.critic.weights)
+				action_critic_Q = calcActionCriticValue(self.action_critic.weights)
+				
+				self.writer.add_scalar('Critic_Q_itr', critic_Q, iteration)
+				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iteration)
 					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
 			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
@@ -234,11 +258,14 @@ class Trainer(object):
 				   'mean_belief_error_per_episode.png')
 			
 			# tensorboard plots
-			self.writer.add_scalar('cumulative_reward', itr_reward[-1], episode)
+			self.writer.add_scalar('cumulative_reward', cum_reward, episode)
 			self.writer.add_scalar('episode_length', len(itr_reward), episode)
 			self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
+			self.writer.add_scalar('Critic_Q_episode', critic_Q, episode)
+			self.writer.add_scalar('Action_Critic_Q', action_critic_Q, episode)
 			
-		
+			# Save model
+			saveModelandMetrics(self)
 			
 			
 			#TODO: save checkpoint
