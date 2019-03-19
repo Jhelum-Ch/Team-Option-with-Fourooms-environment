@@ -56,13 +56,23 @@ class MultinomialDirichletBelief:
 					list_final.append(list_int)
 			updated_states_list = list(product(*list_final))
 			
-			for joint_state in updated_states_list:
-				if len(joint_state) > len(set(joint_state)):
-					updated_states_list.remove(joint_state)
-			
+			# print('removing duplicates:')
+			# for joint_state in updated_states_list:
+			# 	if len(joint_state) > len(set(joint_state)):
+			# 		print(joint_state, ' removed')
+			# 		updated_states_list.remove(joint_state)
+			#
 			# import pdb; pdb.set_trace()
-
-			for item in updated_states_list:
+			print(updated_states_list)
+			
+			new_updated_states_list = []
+			for joint_state in updated_states_list:
+				if len(list(joint_state)) == len(set(list(joint_state))):
+					new_updated_states_list.append(joint_state)
+			
+			print('Entering updation:')
+			for item in new_updated_states_list:
+				print(item)
 				item = tuple([int(i) for i in item])
 				self.counts[item] += 10000
 				counts_vec[self.states_list.index(item)] += 10000
@@ -149,14 +159,8 @@ class MultinomialDirichletBelief:
 				else:  # if isinstance(old_feasible_states[i],list)
 					new_list = [self.estimated_feasible_state(s) for s in
 								old_feasible_states[i]]  # new_list is list of list
-					flatten_new_list = [s for item in new_list for s in item]
+					flatten_new_list = [int(s) for item in new_list for s in item]
 					new_feasible_states.append(list(set(flatten_new_list)))
-		
-		# # remove infeasible states from te list e.g. (12, 24, 24)
-		# for joint_state in new_feasible_states:
-		# 	print(joint_state)
-		# 	if len(joint_state) > len(set(joint_state)):
-		# 		new_feasible_states.remove(joint_state)
 		
 		return new_feasible_states
 
