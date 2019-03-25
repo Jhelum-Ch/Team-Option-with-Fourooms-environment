@@ -204,7 +204,10 @@ class Trainer(object):
 				switches += switch
 				# change_in_options = [currJO != nextJO for (currJO,nextJO) in zip(joint_option,next_joint_option)]
 
-				c += params['train']['deliberation_cost']*switch
+				if switch:
+					c = 0.0001*params['train']['deliberation_cost']*switch
+				else:
+					c = 0
 				
 
 				joint_option = next_joint_option
