@@ -28,7 +28,7 @@ class Trainer(object):
 			self.belief = MultinomialDirichletBelief(self.env, alpha)
 
 			# deliberation cost 
-			eta = params['train']['deliberation_cost']
+			# eta = params['train']['deliberation_cost']
 		
 			
 			# create option pool
@@ -80,13 +80,14 @@ class Trainer(object):
 		episode_length = []
 		avg_belief_error = []
 		iterations = 0
+		switches = 0
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# # 'f'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
 			prev_joint_state = joint_state
-			joint_observation = [(joint_state[i],None) for i in range(self.env.n_agents)]
+			prev_joint_obs = [(joint_state[i],None) for i in range(self.env.n_agents)]
 			prev_joint_action = tuple([None for _ in range(self.env.n_agents)])
 			
 			#
@@ -145,7 +146,8 @@ class Trainer(object):
 			c = 0.0
 			
 			for iteration in range(params['env']['episode_length']):
-				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
+				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :',
+					  self.env.discovered_goals)
 				# iv
 				joint_action = self.doc.chooseAction()
 				
@@ -162,7 +164,7 @@ class Trainer(object):
 				# vii - viii
 				broadcasts = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
 											 prev_sampled_joint_state = sampled_joint_state,
-											 prev_joint_obs = joint_observation,
+											 prev_joint_obs = prev_joint_obs,
 											 prev_true_joint_state = prev_joint_state, 
 											 prev_joint_action = prev_joint_action, 
 											 joint_option = joint_option, 
@@ -171,10 +173,10 @@ class Trainer(object):
 											 reward = reward)
 				
 				reward += np.sum([i * self.env.broadcast_penalty for i in broadcasts])
-				cum_reward += reward
+				cum_reward = reward + params['env']['discount'] * cum_reward
 				
 				# ix
-				next_joint_observation = self.env.get_observation(broadcasts)
+				joint_observation = self.env.get_observation(broadcasts)
 				
 				# x - critic evaluation
 				critic_feedback = self.doc.evaluateOption(critic=self.critic,
@@ -197,12 +199,12 @@ class Trainer(object):
 								   )
 				
 				# xi B
-				next_joint_option = self.doc.chooseOptionOnTermination(self.options, joint_option, sampled_joint_state)
-				currJO_ID = [o.optionID for o in joint_option]
-				nextJO_ID = [o.optionID for o in next_joint_option]
-				change_in_options = [currJO != nextJO for (currJO,nextJO) in zip(currJO_ID,nextJO_ID)]
+				next_joint_option, switch = self.doc.chooseOptionOnTermination(self.options, joint_option,
+																		 sampled_joint_state)
+				switches += switch
+				# change_in_options = [currJO != nextJO for (currJO,nextJO) in zip(joint_option,next_joint_option)]
 
-				c += eta*np.sum(change_in_options)
+				c += params['train']['deliberation_cost']*switch
 				
 
 				joint_option = next_joint_option
@@ -211,12 +213,15 @@ class Trainer(object):
 				joint_state = next_joint_state
 
 				prev_joint_obs = joint_observation
-				joint_observation = next_joint_observation
 
 				prev_joint_action = joint_action
 				
 				self.belief.update(joint_observation,old_feasible_states)
 				sampled_joint_state = self.belief.sampleJointState() # iii
+				
+				true_state_tocells = ([self.env.tocellcoord[s] for s in joint_state])
+				sampled_state_tocells = ([self.env.tocellcoord[s] for s in sampled_joint_state])
+				print('true joint state : ', true_state_tocells, 'sampled joint state :', sampled_state_tocells)
 				
 				old_feasible_states = self.belief.new_feasible_state(old_feasible_states,joint_observation)
 				
@@ -234,6 +239,7 @@ class Trainer(object):
 				iterations += 1
 				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
 				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
+				self.writer.add_scalar('option switches', switches, iterations)
 				
 				if done:
 					break
