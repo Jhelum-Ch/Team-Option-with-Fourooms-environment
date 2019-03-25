@@ -77,7 +77,7 @@ class DOC:
 		
 		# if none of the options terminated, return the existing joint option
 		if not np.sum(terminations):
-			return joint_option
+			return joint_option, np.sum(terminations)
 			
 		# # if at least one of the agent is terminating, sample a joint option from mu_policy that conforms with the
 		# # non-terminating options
@@ -113,7 +113,7 @@ class DOC:
 		for option in sampled_joint_option:
 			options[option].available = False
 		# return the joint options
-		return sampled_joint_option
+		return sampled_joint_option, np.sum(terminations)
 	
 			
 	def chooseAction(self):

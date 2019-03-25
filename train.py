@@ -26,6 +26,9 @@ class Trainer(object):
 			
 			alpha = 0.001 * np.ones(len(self.env.states_list))
 			self.belief = MultinomialDirichletBelief(self.env, alpha)
+
+			# deliberation cost 
+			eta = params['train']['deliberation_cost']
 		
 			
 			# create option pool
@@ -138,6 +141,8 @@ class Trainer(object):
 			cum_reward = 0
 			itr_reward = []
 			belief_error = []
+
+			c = 0.0
 			
 			for iteration in range(params['env']['episode_length']):
 				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
@@ -149,6 +154,7 @@ class Trainer(object):
 				
 				# v
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
+				reward += reward + c
 				# cum_reward += reward
 				
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
@@ -191,7 +197,15 @@ class Trainer(object):
 								   )
 				
 				# xi B
-				joint_option = self.doc.chooseOptionOnTermination(self.options, joint_option, sampled_joint_state)
+				next_joint_option = self.doc.chooseOptionOnTermination(self.options, joint_option, sampled_joint_state)
+				currJO_ID = [o.optionID for o in joint_option]
+				nextJO_ID = [o.optionID for o in next_joint_option]
+				change_in_options = [currJO != nextJO for (currJO,nextJO) in zip(currJO_ID,nextJO_ID)]
+
+				c += eta*np.sum(change_in_options)
+				
+
+				joint_option = next_joint_option
 				
 				prev_joint_state = joint_state
 				joint_state = next_joint_state

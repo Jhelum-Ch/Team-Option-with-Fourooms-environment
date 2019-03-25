@@ -40,7 +40,7 @@ class MultinomialDirichletBelief:
 
 			for item in self.states_list:
 				if item == observed_states:
-					counts_vec[self.states_list.index(item)] += 100000
+					counts_vec[self.states_list.index(item)] += 10000000
 					break
 					
 		else:
@@ -63,19 +63,19 @@ class MultinomialDirichletBelief:
 			# 		updated_states_list.remove(joint_state)
 			#
 			# import pdb; pdb.set_trace()
-			print(updated_states_list)
+			# print(updated_states_list)
 			
 			new_updated_states_list = []
 			for joint_state in updated_states_list:
 				if len(list(joint_state)) == len(set(list(joint_state))):
 					new_updated_states_list.append(joint_state)
 			
-			print('Entering updation:')
+			# print('Entering updation:')
 			for item in new_updated_states_list:
-				print(item)
+				# print(item)
 				item = tuple([int(i) for i in item])
-				self.counts[item] += 10000
-				counts_vec[self.states_list.index(item)] += 10000
+				self.counts[item] += 1000000
+				counts_vec[self.states_list.index(item)] += 1000000
 
 
 		return MultinomialDirichletBelief(self.env, np.add(self.alpha,counts_vec))
