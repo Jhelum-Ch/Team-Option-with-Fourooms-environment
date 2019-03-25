@@ -35,7 +35,7 @@ class TerminationGradient:
 		self.lr = lr
 
 	def update(self, joint_state, joint_option): #use joint-state in place of phi
-		advantage = self.critic.getAdvantage(joint_state, joint_option)
+		advantage = self.critic.getAdvantage(joint_state, joint_option)	 + params['train']['deliberation_cost']
 		for state, option in zip(joint_state, joint_option):
 			# phi = joint_state[agentID]
 			magnitudes, directions = self.termination[option].grad(state)
