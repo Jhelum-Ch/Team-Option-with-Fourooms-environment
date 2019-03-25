@@ -23,14 +23,15 @@ params = {
 		'n_runs'		: 	1,
 		# 'n_epochs'		: 	50,
 		'n_episodes'	:	100,
-		'n_steps' 		: 	500,
+		'n_steps' 		: 	1000,
 		'seed'			:	1234,
 		# 'discount'		:	0.1,
 		'lr_critic'		: 	0.001,	#alpha_Q
 		'lr_action_critic'	: 0.001,
 		'lr_agent_q'		: 0.001,
 		'lr_theta'			: 0.001,
-		'lr_phi'			: 0.001
+		'lr_phi'			: 0.001,
+		'deliberation_cost' : 100
 	}
 }
 
