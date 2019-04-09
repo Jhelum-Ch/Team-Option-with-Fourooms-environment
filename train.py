@@ -177,7 +177,7 @@ class Trainer(object):
 				# x - critic evaluation
 				critic_feedback = self.doc.evaluateOption(critic=self.critic,
 													 action_critic=self.action_critic,
-													 joint_state=estimated_next_joint_state, #why not sampled_joint_state? Plus, this should be sampled_next_joint_state!
+													 joint_state=estimated_next_joint_state, # this should be sampled_next_joint_state, s'_k in the algo
 													 joint_option=joint_option,
 													 joint_action=joint_action,
 													 reward=reward,
@@ -188,7 +188,7 @@ class Trainer(object):
 				# xi A
 				self.doc.improveOption(policy_obj=self.intra_option_policy_gradient,
 								  termination_obj=self.termination_gradient,
-								  joint_state=estimated_next_joint_state, #this should be sampled_next_joint_state
+								  joint_state=estimated_next_joint_state, #this should be sampled_next_joint_state, s'_k in the algo
 								  joint_option=joint_option,
 								  joint_action=joint_action,
 								  critic_feedback=critic_feedback
