@@ -5,14 +5,15 @@ from optionCritic.termination import SigmoidTermination
 from optionCritic.option import createOptions
 from random import shuffle
 from doc import DOC
-from distributed.belief import MultinomialDirichletBelief
+#from distributed.belief import MultinomialDirichletBelief
 from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning
 import numpy as np
 import itertools
 import random
 import operator
 
-from fourroomsEnv import FourroomsMA
+
+#from fourroomsEnv import FourroomsMA
 
 
 def testCreateOption(env):
@@ -157,20 +158,25 @@ def testSoftmaxOptionPolicy(env):
 	# policy.sample(joint_state=(20, 30, 40))
 	print(policy.sample((30,)))
 
-def testBelief(env):
-	alpha = 0.001 * np.ones(len(env.states_list))
-	belief = MultinomialDirichletBelief(env,alpha)
 
-	#joint_observation = [(20,-1),(54,1),(102,1)]
-	joint_observation = [(20,-1),(54,1),None]
-	#joint_observation = [None,None,None]
-	belief = belief.update(joint_observation)
-	#belief.pmf()
-	belief.sampleJointState()
+# def testBelief(env):
+# 	alpha = 0.001 * np.ones(len(env.states_list))
+# 	belief = MultinomialDirichletBelief(env,alpha)
+
+# 	#joint_observation = [(20,-1),(54,1),(102,1)]
+# 	joint_observation = [(20,-1),(54,1),None]
+# 	#joint_observation = [None,None,None]
+# 	belief = belief.update(joint_observation)
+# 	#belief.pmf()
+# 	belief.sampleJointState()
 		
 
-env = FourroomsMA()
+# env = FourroomsMA()
 
+
+	
+	
+	
 	
 	
 	# joint_state = (1, 2, 3)
@@ -252,5 +258,4 @@ env = FourroomsMA()
 
 		
 	
-	
-	
+

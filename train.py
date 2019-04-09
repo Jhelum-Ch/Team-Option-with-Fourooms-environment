@@ -21,14 +21,15 @@ class Trainer(object):
 		for _ in range(params['train']['n_runs']):
 			# put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# 'seed'] in modelConfig remains unchanged
-			joint_state = self.env.reset()
+			#joint_state = self.env.reset()
 			
 			
 			alpha = 0.001 * np.ones(len(self.env.states_list))
 			self.belief = MultinomialDirichletBelief(self.env, alpha)
 
 			# deliberation cost 
-			eta = params['train']['deliberation_cost']
+
+			# eta = params['train']['deliberation_cost']
 		
 			
 			# create option pool
@@ -80,32 +81,23 @@ class Trainer(object):
 		episode_length = []
 		avg_belief_error = []
 		iterations = 0
+		switches = 0
+
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# # 'f'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
 			prev_joint_state = joint_state
-			joint_observation = [(joint_state[i],None) for i in range(self.env.n_agents)]
+			prev_joint_obs = [(joint_state[i],None) for i in range(self.env.n_agents)]
 			prev_joint_action = tuple([None for _ in range(self.env.n_agents)])
 			
 			#
 			# belief = MultinomialDirichletBelief(self.env, joint_observation)
 			sampled_joint_state = joint_state
 			old_feasible_states = joint_state
-			#
-			# # create option pool
-			# options, mu_policy = createOptions(self.env)
-			# # options is a list of option object. Each option object has its own termination policy and pi_policy.
-			# # pi_policy for option 0 can be called as	:	options[0].policy.weights
-			# # options[0].policy is the object of SoftmaxActionPolicy()
-			# # termination for option 0 can be called as	:	options[0].termination.weights
-			#
-			# terminations = [option.termination for option in options]
-			# pi_policies = [option.policy for option in options]
-			#
-			# doc = DOC(self.env, options, mu_policy)
-			#
+			
+			
 			# d. Choose joint-option o based on softmax option-policy mu
 			joint_option = self.doc.initializeOption(joint_state=joint_state)
 
@@ -145,7 +137,10 @@ class Trainer(object):
 			c = 0.0
 			
 			for iteration in range(params['env']['episode_length']):
-				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward)
+
+				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :',
+					  self.env.discovered_goals)
+
 				# iv
 				joint_action = self.doc.chooseAction()
 				
@@ -162,7 +157,7 @@ class Trainer(object):
 				# vii - viii
 				broadcasts = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
 											 prev_sampled_joint_state = sampled_joint_state,
-											 prev_joint_obs = joint_observation,
+											 prev_joint_obs = prev_joint_obs,
 											 prev_true_joint_state = prev_joint_state, 
 											 prev_joint_action = prev_joint_action, 
 											 joint_option = joint_option, 
@@ -171,15 +166,18 @@ class Trainer(object):
 											 reward = reward)
 				
 				reward += np.sum([i * self.env.broadcast_penalty for i in broadcasts])
-				cum_reward += reward
+
+				cum_reward = reward + params['env']['discount'] * cum_reward
 				
 				# ix
-				next_joint_observation = self.env.get_observation(broadcasts)
+				joint_observation = self.env.get_observation(broadcasts)
+
+				estimated_next_joint_state = self.estimate_next_joint_state(joint_observation,sampled_joint_state)
 				
 				# x - critic evaluation
 				critic_feedback = self.doc.evaluateOption(critic=self.critic,
 													 action_critic=self.action_critic,
-													 joint_state=joint_state,
+													 joint_state=estimated_next_joint_state, #why not sampled_joint_state? Plus, this should be sampled_next_joint_state!
 													 joint_option=joint_option,
 													 joint_action=joint_action,
 													 reward=reward,
@@ -190,19 +188,23 @@ class Trainer(object):
 				# xi A
 				self.doc.improveOption(policy_obj=self.intra_option_policy_gradient,
 								  termination_obj=self.termination_gradient,
-								  joint_state=sampled_joint_state,
+								  joint_state=estimated_next_joint_state, #this should be sampled_next_joint_state
 								  joint_option=joint_option,
 								  joint_action=joint_action,
 								  critic_feedback=critic_feedback
 								   )
 				
 				# xi B
-				next_joint_option = self.doc.chooseOptionOnTermination(self.options, joint_option, sampled_joint_state)
-				currJO_ID = [o.optionID for o in joint_option]
-				nextJO_ID = [o.optionID for o in next_joint_option]
-				change_in_options = [currJO != nextJO for (currJO,nextJO) in zip(currJO_ID,nextJO_ID)]
 
-				c += eta*np.sum(change_in_options)
+				next_joint_option, switch = self.doc.chooseOptionOnTermination(self.options, joint_option,
+																		 sampled_joint_state)
+				switches += switch
+				# change_in_options = [currJO != nextJO for (currJO,nextJO) in zip(joint_option,next_joint_option)]
+
+				if switch:
+					c = 0.0001*params['train']['deliberation_cost']*switch
+				else:
+					c = 0
 				
 
 				joint_option = next_joint_option
@@ -211,13 +213,18 @@ class Trainer(object):
 				joint_state = next_joint_state
 
 				prev_joint_obs = joint_observation
-				joint_observation = next_joint_observation
+
 
 				prev_joint_action = joint_action
 				
 				self.belief.update(joint_observation,old_feasible_states)
 				sampled_joint_state = self.belief.sampleJointState() # iii
 				
+				true_state_tocells = ([self.env.tocellcoord[s] for s in joint_state])
+				sampled_state_tocells = ([self.env.tocellcoord[s] for s in sampled_joint_state])
+				print('true joint state : ', true_state_tocells, 'sampled joint state :', sampled_state_tocells)
+				
+
 				old_feasible_states = self.belief.new_feasible_state(old_feasible_states,joint_observation)
 				
 				belief_error.append(calcErrorInBelief(self.env, joint_state, sampled_joint_state))
@@ -234,6 +241,9 @@ class Trainer(object):
 				iterations += 1
 				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
 				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
+
+				self.writer.add_scalar('option switches', switches, iterations)
+
 				
 				if done:
 					break
@@ -269,6 +279,20 @@ class Trainer(object):
 			
 			
 			#TODO: save checkpoint
+
+
+	def estimate_next_joint_state(self, joint_observation, sampled_joint_state):
+		res = np.zeros(len(joint_observation))
+		for i in range(len(joint_observation)):
+			if joint_observation[i] is not None:
+				res[i] = self.env.tocellnum[self.env.tocellcoord[joint_observation[i][0]] + self.env.directions[joint_observation[i][1]]]
+			else:
+				random_action = np.random.choice(range(len(self.env.actions)))
+				res[i] = self.env.tocellnum[self.env.tocellcoord[joint_observation[i][0]] + self.env.directions[random_action]]
+		return tuple(res)
+
+
+
 	
 		
 	
