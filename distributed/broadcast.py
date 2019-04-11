@@ -24,43 +24,77 @@ class Broadcast:
            
             #estimate other agents' current states
             for other_agent in other_agents:
-                if prev_joint_obs[other_agent.ID] is None or prev_joint_obs[other_agent.ID][1] is None:
+
+                if prev_joint_obs[other_agent.ID] is None:
+
                     
                     # estimate the next cell of agents using last sampled state and randomly chosen 
-                    other_actions_for_other = [int(a) for a in self.env.actions]
-                    chosen_action_for_other = np.random.choice(other_actions_for_other,1)
+                    list_of_neighbors = self.env.empty_adjacent(self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]])
+                    idx = np.random.choice(len(list_of_neighbors))
+
+                    estimated_curr_cell_for_other = list_of_neighbors[idx]
+
+                    # other_actions_for_other = [int(a) for a in self.env.actions]
+                    # chosen_action_for_other = np.random.choice(other_actions_for_other,1)
         
-                    while self.env.occupancy[tuple(self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]]+self.env.directions[int(chosen_action_for_other)])] == 1:
-                        other_actions_for_other.remove(chosen_action_for_other[0])
-                        chosen_action_for_other = np.random.choice(other_actions_for_other,1) 
+                    # while self.env.occupancy[tuple(self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]]+self.env.directions[int(chosen_action_for_other)])] == 1:
+                    #     other_actions_for_other.remove(chosen_action_for_other[0])
+                    #     chosen_action_for_other = np.random.choice(other_actions_for_other,1) 
         
-                    estimated_curr_cell_for_other = self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]] + self.env.directions[int(chosen_action_for_other)]
+                    # estimated_curr_cell_for_other = self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]] + self.env.directions[int(chosen_action_for_other)]
 
                     estimated_curr_joint_state[other_agent.ID] = self.env.tocellnum[tuple(estimated_curr_cell_for_other)]
+
+                elif prev_joint_obs[other_agent.ID][1] is None:
+                    list_of_neighbors = self.env.empty_adjacent(self.env.tocellcoord[prev_joint_obs[other_agent.ID][0]])
+                    idx = np.random.choice(len(list_of_neighbors))
+
+                    estimated_curr_cell_for_other = list_of_neighbors[idx]
+
                 else:
-                    other_actions_for_other = [int(a) for a in self.env.actions]
-                    chosen_action_for_other = prev_joint_obs[other_agent.ID][1]
-                    while self.env.occupancy[tuple(self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]]+self.env.directions[int(chosen_action_for_other)])] == 1:
-                        # other_actions_for_other.remove(prev_joint_obs[other_agent.ID][1])
-                        other_actions_for_other.remove(chosen_action_for_other)
-                        chosen_action_for_other = np.random.choice(other_actions_for_other,1) 
+                    if self.env.occupancy[tuple(self.env.tocellcoord[prev_joint_obs[other_agent.ID][0]] + self.env.directions[prev_joint_obs[other_agent.ID][1]])] == 0:
+                        estimated_curr_cell_for_other = self.env.tocellnum[tuple(self.env.tocellcoord[prev_joint_obs[other_agent.ID][0]] + self.env.directions[prev_joint_obs[other_agent.ID][1]])]
+                    else:
+                        list_of_neighbors = self.env.empty_adjacent(self.env.tocellcoord[prev_joint_obs[other_agent.ID][0]])
+                        idx = np.random.choice(len(list_of_neighbors))
 
-                    estimated_curr_joint_state[other_agent.ID] = self.env.tocellnum[tuple(self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]] + self.env.directions[int(chosen_action_for_other)])]
+                        estimated_curr_cell_for_other = list_of_neighbors[idx]
 
+
+                    # other_actions_for_other = [int(a) for a in self.env.actions]
+                    # chosen_action_for_other = prev_joint_obs[other_agent.ID][1]
+                    # while self.env.occupancy[tuple(self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]]+self.env.directions[int(chosen_action_for_other)])] == 1:
+                    #     # other_actions_for_other.remove(prev_joint_obs[other_agent.ID][1])
+                    #     other_actions_for_other.remove(chosen_action_for_other)
+                    #     chosen_action_for_other = np.random.choice(other_actions_for_other,1) 
+
+                    #estimated_curr_joint_state[other_agent.ID] = self.env.tocellnum[tuple(self.env.tocellcoord[prev_sampled_joint_state[other_agent.ID]] + self.env.directions[int(chosen_action_for_other)])]
+                estimated_curr_joint_state[other_agent.ID] = self.env.tocellnum[estimated_curr_cell_for_other]
            
             estimated_curr_joint_state[agent.ID] = agent.state
 
             if prev_true_joint_state[agent.ID] == prev_sampled_joint_state[agent.ID] and prev_joint_action[agent.ID] is not None: #this means agent broadcast at last instant
                 estimated_own_curr_cell = self.env.tocellcoord[prev_sampled_joint_state[agent.ID]] + self.env.directions[prev_joint_action[agent.ID]]
+                if self.env.occupancy[tuple(estimated_own_curr_cell)] == 1:
+                    list_of_neighbors = self.env.empty_adjacent(self.env.tocellcoord[prev_sampled_joint_state[agent.ID]])
+                    idx = np.random.choice(len(list_of_neighbors))
+
+                    estimated_own_curr_cell = list_of_neighbors[idx]
+
              
             else:   
                 # estimate the next cell of agent using last sampled state and randomly chosen 
-                other_actions = [int(a) for a in self.env.actions]
-                chosen_action = np.random.choice(other_actions,1)
-                while self.env.occupancy[tuple(self.env.tocellcoord[prev_sampled_joint_state[agent.ID]]+self.env.directions[int(chosen_action)])] == 1:
-                    other_actions.remove(int(chosen_action))
-                    chosen_action = np.random.choice(other_actions,1) 
-                estimated_own_curr_cell = self.env.tocellcoord[prev_sampled_joint_state[agent.ID]] + self.env.directions[int(chosen_action)]
+                list_of_neighbors = self.env.empty_adjacent(self.env.tocellcoord[prev_sampled_joint_state[agent.ID]])
+                idx = np.random.choice(len(list_of_neighbors))
+
+                estimated_own_curr_cell = list_of_neighbors[idx]
+                
+                # other_actions = [int(a) for a in self.env.actions]
+                # chosen_action = np.random.choice(other_actions,1)
+                # while self.env.occupancy[tuple(self.env.tocellcoord[prev_sampled_joint_state[agent.ID]]+self.env.directions[int(chosen_action)])] == 1:
+                #     other_actions.remove(int(chosen_action))
+                #     chosen_action = np.random.choice(other_actions,1) 
+                # estimated_own_curr_cell = self.env.tocellcoord[prev_sampled_joint_state[agent.ID]] + self.env.directions[int(chosen_action)]
 
             error_due_to_no_broadcast = np.linalg.norm([i-j for (i,j) in zip(estimated_own_curr_cell,self.env.tocellcoord[curr_true_joint_state[agent.ID]])])
 
