@@ -6,7 +6,7 @@ params = {
 		'goal_reward' 		:	 1,
 		'broadcast_penalty'	:  -0.003,
 		'collision_penalty' :  -0.01,
-		'episode_length'	: 	500,
+		'episode_length'	: 	1000,
 		'no_broadcast_threshold'	: 0.01,	#TODO : tune
 		'selfishness_penalty'	: -0.001,	#TODO : tune
 		'discount'				: 0.99
@@ -17,7 +17,7 @@ params = {
 		'n_actions'	:	4
 	},
 	'policy'	:	{
-		'temperature'	: 0.5
+		'temperature'	: 1.0
 	},
 	'train': {
 		'n_runs'		: 	1,
