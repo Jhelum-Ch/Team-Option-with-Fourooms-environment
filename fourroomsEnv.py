@@ -147,11 +147,13 @@ wwwwwwwwwwwww
 
     # returns empty cells around a given cell (taken as coordinates) (unused in code)
     def empty_adjacent(self, cell):
+        import operator
         empty = []
         for d in self.directions:
-            if self.occupancy[cell+d] == 0:
-                empty.append(cell+d)
-
+            neighbor = tuple(map(operator.add, cell, d))
+            if self.occupancy[neighbor] == 0:
+            # if self.occupancy[cell+d] == 0:
+                empty.append(neighbor)
         return empty
 
     # returns all four cells adjacent to a given cell (taken as coordinates)
