@@ -157,12 +157,14 @@ class DOC:
 			critic_feedback -= critic.value(joint_state, joint_option)
 		return critic_feedback
 	
-	def improveOption(self, policy_obj, termination_obj, joint_state, joint_option, joint_action, critic_feedback):
+	def improveOption(self, policy_obj, termination_obj, sampled_joint_state,
+					  next_joint_state, estimated_next_joint_state, joint_option, joint_action, critic_feedback):
+		# joint state refers to sampled state s_k and next_joint_state refers to s_k^'
 		# update theta : policy improvement
-		policy_obj.update(joint_state, joint_option, joint_action, critic_feedback)
+		policy_obj.update(self.env.agents, sampled_joint_state, joint_option, joint_action, critic_feedback)
 		
 		#update phi : temriantion (beta) improvement
-		termination_obj.update(joint_state, joint_option)
+		termination_obj.update(next_joint_state, estimated_next_joint_state, joint_option)
 	
 			
 	
