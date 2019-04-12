@@ -34,9 +34,11 @@ class TerminationGradient:
 		self.critic = critic
 		self.lr = lr
 
-	def update(self, joint_state, joint_option): #use joint-state in place of phi
-		advantage = self.critic.getAdvantage(joint_state, joint_option)	 + params['train']['deliberation_cost']
-		for state, option in zip(joint_state, joint_option):
+	def update(self, next_joint_state, estimated_next_joint_state, joint_option):
+		# joint_state refers to sampled next state (estimated_next_state), s_k^'
+		advantage = self.critic.getAdvantage(estimated_next_joint_state, joint_option)	 + params['train'][
+			'deliberation_cost']
+		for state, option in zip(next_joint_state, joint_option):
 			# phi = joint_state[agentID]
 			magnitudes, directions = self.termination[option].grad(state)
 			self.termination[option].weights[directions] -= \
@@ -47,8 +49,10 @@ class IntraOptionGradient:
 		self.lr = lr
 		self.pi_policy = pi_policy #as a list of options in use
 
-	def update(self, joint_state, joint_option, joint_action, critic): # phi is agent_state
-		for state, option, action in zip(joint_state, joint_option, joint_action):
-			agent_actionPmf = self.pi_policy[option].pmf(state)
-			self.pi_policy[option].weights[state, :] -= self.lr*critic*agent_actionPmf
-			self.pi_policy[option].weights[state, action] += self.lr*critic
+	def update(self, agents, joint_state, joint_option, joint_action, action_critic_value):
+		# joint state refers to sampled joint state, s_k
+		for idx, state, option, action in zip(range(len(joint_state)), joint_state, joint_option, joint_action):
+			agent_state = agents[idx].state
+			log_pi = self.pi_policy[option].pmf(agent_state)
+			self.pi_policy[option].weights[state, :] -= self.lr*action_critic_value*log_pi
+			self.pi_policy[option].weights[state, action] += self.lr*action_critic_value
