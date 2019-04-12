@@ -85,6 +85,7 @@ class Trainer(object):
 
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
+			
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# # 'f'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
@@ -130,8 +131,8 @@ class Trainer(object):
 				# iv
 				joint_action = self.doc.chooseAction()
 				
-				for agent in self.env.agents:
-					agent.action = joint_action[agent.ID]
+				# for agent in self.env.agents:
+				# 	agent.action = joint_action[agent.ID]
 				
 				# v
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
@@ -177,7 +178,9 @@ class Trainer(object):
 				# xi A
 				self.doc.improveOption(policy_obj=self.intra_option_policy_gradient,
 								  termination_obj=self.termination_gradient,
-								  joint_state=estimated_next_joint_state, #this should be sampled_next_joint_state, s'_k in the algo
+								  sampled_joint_state=sampled_joint_state,
+								  next_joint_state= next_joint_state,
+								  estimated_next_joint_state =estimated_next_joint_state,
 								  joint_option=joint_option,
 								  joint_action=joint_action,
 								  critic_feedback=critic_feedback
@@ -209,8 +212,8 @@ class Trainer(object):
 				# self.belief.update(joint_observation,old_feasible_states)
 				# sampled_joint_state = self.belief.sampleJointState() # iii
 				
-				true_state_tocells = ([self.env.tocellcoord[s] for s in joint_state])
-				sampled_state_tocells = ([self.env.tocellcoord[s] for s in sampled_joint_state])
+				# true_state_tocells = ([self.env.tocellcoord[s] for s in joint_state])
+				# sampled_state_tocells = ([self.env.tocellcoord[s] for s in sampled_joint_state])
 				# print('true joint state : ', true_state_tocells, 'sampled joint state :', sampled_state_tocells)
 				
 
