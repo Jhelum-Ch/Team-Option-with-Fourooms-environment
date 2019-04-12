@@ -4,11 +4,11 @@ params = {
 	'env'	:	{
 		'n_agents'			:	3,
 		'goal_reward' 		:	 1,
-		'broadcast_penalty'	:  -0.003,
+		'broadcast_penalty'	:  -0.03,
 		'collision_penalty' :  -0.01,
 		'episode_length'	: 	1000,
 		'no_broadcast_threshold'	: 0.01,	#TODO : tune
-		'selfishness_penalty'	: -0.001,	#TODO : tune
+		'selfishness_penalty'	: -0.01,	#TODO : tune
 		'discount'				: 0.99
 		#'initial_joint_state'	:	(11, 31, 21)
 	},
@@ -26,12 +26,12 @@ params = {
 		'n_steps' 		: 	1000,
 		'seed'			:	1234,
 		# 'discount'		:	0.1,
-		'lr_critic'		: 	0.001,	#alpha_Q
-		'lr_action_critic'	: 0.001,
-		'lr_agent_q'		: 0.001,
-		'lr_theta'			: 0.001,
-		'lr_phi'			: 0.001,
-		'deliberation_cost' : 100
+		'lr_critic'		: 	0.01,	#alpha_Q
+		'lr_action_critic'	: 0.01,
+		'lr_agent_q'		: 0.01,
+		'lr_theta'			: 0.01,
+		'lr_phi'			: 0.01,
+		'deliberation_cost' : 10
 	}
 }
 
