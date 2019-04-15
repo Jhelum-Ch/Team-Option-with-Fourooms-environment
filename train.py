@@ -5,7 +5,7 @@ from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearn
 from distributed.belief import MultinomialDirichletBelief
 from optionCritic.gradients import TerminationGradient, IntraOptionGradient
 import numpy as np
-from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue
+from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue, calcAgentActionValue
 from utils.misc import saveModelandMetrics
 from tensorboardX import SummaryWriter
 
@@ -229,14 +229,6 @@ class Trainer(object):
 					
 					plotReward(belief_error, 'iterations', 'error', self.expt_folder,
 							   'belief_error_' + str(episode) + '.png')
-					
-				# tensorboard plots
-				iterations += 1
-				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
-				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
-
-				self.writer.add_scalar('option switches', switches, iterations)
-
 				
 				if done:
 					break
@@ -244,9 +236,20 @@ class Trainer(object):
 				critic_Q = calcCriticValue(self.critic.weights)
 				action_critic_Q = calcActionCriticValue(self.action_critic.weights)
 				
-				self.writer.add_scalar('Critic_Q_itr', critic_Q, iteration)
-				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iteration)
-				self.writer.add_scalar('Belief_Error_itr', belief_error_step, iteration)
+				# tensorboard plots
+				iterations += 1
+				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
+				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
+				self.writer.add_scalar('option switches', switches, iterations)
+				self.writer.add_scalar('Critic_Q_itr', critic_Q, iterations)
+				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iterations)
+				self.writer.add_scalar('Belief_Error_itr', belief_error_step, iterations)
+				
+				optionValues = calcAgentActionValue(self.options)
+				
+				for idx, option in enumerate(self.options):
+					self.writer.add_scalar('option '+str(idx)+':', optionValues[idx], iterations)
+					
 					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
 			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
