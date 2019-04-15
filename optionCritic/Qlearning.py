@@ -56,6 +56,11 @@ class IntraOptionQLearning:
 			max_idx, max_value = max(all_Q.items(), key=operator.itemgetter(1))
 			
 			return max_value
+
+
+		if joint_option not in self.weights[joint_state].keys():
+				self.weights[joint_state][joint_option] = 0.0
+		
 		
 		return self.weights[joint_state][joint_option]
 	
