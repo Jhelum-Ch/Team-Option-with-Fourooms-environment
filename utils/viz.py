@@ -31,10 +31,10 @@ def calcErrorInBelief(env, true_joint_state, sampled_joint_state):
 
 def calcCriticValue(nested_dict):
 	keys = list(nested_dict.keys())
-	total_Q = 0
+	Q = []
 	for key in keys:
-		total_Q += sum(nested_dict[key].values())
-	return total_Q
+		Q.append(max(nested_dict[key].values()))
+	return np.linalg.norm(Q)
 
 def calcActionCriticValue(nested_dict):
 	option_keys = list(nested_dict.keys())
@@ -45,6 +45,10 @@ def calcActionCriticValue(nested_dict):
 			total_Q += sum(nested_dict[o_key][a_key].values())
 	return total_Q
 	
-
+def calcAgentActionValue(options):
+	action_values = []
+	for option in options:
+		action_values.append(np.linalg.norm(np.max(option.policy.weights, axis= 1)))
+	return action_values
 
 #TODO : visualize options
