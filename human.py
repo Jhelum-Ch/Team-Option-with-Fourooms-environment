@@ -57,7 +57,7 @@ def main():
             print("unknown key %s" % keyName)
             return
 
-        reward, done, info = env.step([action]*env.n_agents)
+        reward, state, done, info = env.step([action]*env.n_agents)
 
         print('step=%s, reward=%.2f' % (env.step_count, reward))
 
