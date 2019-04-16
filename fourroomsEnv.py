@@ -34,8 +34,11 @@ class FourroomsMA(gym.Env):
         right = 3
         # stay = 4
 
-    def __init__(self, n_agents = 3, goal_reward = 1., broadcast_penalty = -0.01, collision_penalty = -0.01, discount = 0.9):
-        layout = """\
+    def __init__(self, n_agents = 3, goal_reward = 1., broadcast_penalty = -0.01, collision_penalty = -0.01, discount = 0.9, layout = None, goals = None):
+
+        if layout is None:
+
+            self.layout = """\
 wwwwwwwwwwwww
 w     w     w
 w     w     w
@@ -50,12 +53,14 @@ w           w
 w     w     w
 wwwwwwwwwwwww
 """
+        else:
+            self.layout = layout
 
         self.n_agents = n_agents
         self.goal_reward = goal_reward
         self.broadcast_penalty = broadcast_penalty
         self.collision_penalty = collision_penalty
-        self.discoount = discount
+        self.discount = discount
 
 
 
@@ -74,8 +79,7 @@ wwwwwwwwwwwww
         # create occupancy matrix.
         # 0 : free cell
         # 1 : wall
-        self.occupancy = np.array([list(map(lambda c: 1 if c == 'w' else 0, line)) for line in layout.splitlines()])
-
+        self.occupancy = np.array([list(map(lambda c: 1 if c == 'w' else 0, line)) for line in self.layout.splitlines()])
 
         self.height = len(self.occupancy)
         self.width = len(self.occupancy[0])
@@ -117,7 +121,10 @@ wwwwwwwwwwwww
         self.states_list = [s for s in list(itertools.product(self.cell_list, repeat=self.n_agents))
                             if len(s) == len(np.unique(s))]
 
-        self.goals = [50, 62, 71, 98, 103]  # fixed goals
+        if goals is None:
+            self.goals = [50, 62, 71, 98, 103]  # fixed goals
+        else:
+            self.goals = goals
 
         self.goals.sort()                   # important if not already sorted in line above
         self.discovered_goals = []
@@ -481,9 +488,35 @@ wwwwwwwwwwwww
 
 
 
+class FourroomsMASmall(FourroomsMA):
+
+    def __init__(self):
+
+        layout = """\
+wwwwwwwww
+w   w   w
+w       w
+w   w   w
+ww ww   w
+w   ww ww
+w   w   w
+w       w
+wwwwwwwww
+"""
+
+        super().__init__(layout=layout, goals=[12, 20, 39])
+
+
 register(
     id='FourroomsMA-v1',
     entry_point='fourroomsEnv:FourroomsMA',
+    timestep_limit=20000,
+    reward_threshold=1,  # should we modify this?
+)
+
+register(
+    id='FourroomsMA-small-v1',
+    entry_point='fourroomsEnv:FourroomsMASmall',
     timestep_limit=20000,
     reward_threshold=1,  # should we modify this?
 )
