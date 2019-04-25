@@ -82,6 +82,7 @@ class Trainer(object):
 		avg_belief_error = []
 		iterations = 0
 		switches = 0
+		avg_dur_from_episode = []
 
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
@@ -120,6 +121,7 @@ class Trainer(object):
 			cum_reward = 0
 			itr_reward = []
 			belief_error = []
+			options_episode = []
 
 			c = 0.0
 			
@@ -133,6 +135,8 @@ class Trainer(object):
 				
 				# for agent in self.env.agents:
 				# 	agent.action = joint_action[agent.ID]
+
+				options_episode.append(joint_option)
 				
 				# v
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
@@ -251,6 +255,7 @@ class Trainer(object):
 					
 				critic_Q = calcCriticValue(self.critic.weights)
 				action_critic_Q = calcActionCriticValue(self.action_critic.weights)
+
 				
 				self.writer.add_scalar('Critic_Q_itr', critic_Q, iteration)
 				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iteration)
@@ -268,6 +273,10 @@ class Trainer(object):
 			avg_belief_error.append(np.mean(belief_error))
 			plotReward(avg_belief_error, 'episodes', 'mean_belief_error', self.expt_folder,
 				   'mean_belief_error_per_episode.png')
+
+
+			avg_dur = calcAverageDurationFromEpisode(options_episode, len(joint_option))
+			avg_dur_from_episode.append(avg_dur)
 			
 			# tensorboard plots
 			self.writer.add_scalar('cumulative_reward', cum_reward, episode)
@@ -275,6 +284,7 @@ class Trainer(object):
 			self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
 			self.writer.add_scalar('Critic_Q_episode', critic_Q, episode)
 			self.writer.add_scalar('Action_Critic_Q', action_critic_Q, episode)
+			self.writer.add_scalar('average_duration', avg_dur, episode)
 			
 			# Save model
 			saveModelandMetrics(self)
@@ -287,11 +297,15 @@ class Trainer(object):
 		sampled_joint_state = tuple(np.sort(sampled_joint_state))
 		res = np.zeros(len(joint_observation))
 		for i in range(len(joint_observation)):
-			if joint_observation[i] is not None:
+			if joint_observation[i][0] is not None and joint_observation[i][1] is None:
+				idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])))
+				chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])[idx]
+				res[i] = self.env.tocellnum[chosen_cell]
+
+			elif joint_observation[i][0] is not None and joint_observation[i][1] is not None:
 				if self.env.occupancy[tuple(self.env.tocellcoord[joint_observation[i][0]] + self.env.directions[
 					joint_observation[i][1]])] ==1:
 					idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])))
-					# print('idx',idx)
 					chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])[idx]
 					res[i] = self.env.tocellnum[chosen_cell]
 				else:
@@ -300,12 +314,27 @@ class Trainer(object):
 					
 			else:
 				idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])))
-				# print('neighbour',type(self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])))
 				chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])[idx]
 				res[i] = self.env.tocellnum[chosen_cell]
 		
 		res = tuple([int(r) for r in res])
 		return res
+
+
+
+	def calcAverageDurationFromEpisode(listOfOptions,numAgents):
+		agentOptions = {k: [item[k] for item in listOfOptions] for k in range(numAgents)}
+
+		avg_dur = []
+		count = {k:0 for k in agents}
+		for k in list(agentOptions.keys()):
+		    #print(k)
+		    count[k] = 0
+		    for i in range(len(agentOptions[k][:-1])):
+		        if agentOptions[k][i] != agentOptions[k][i+1]:
+		            count[k] += 1
+		    avg_dur.append(count[k]/(len(listOfOptions)-1))
+		return avg_dur
 
 
 
