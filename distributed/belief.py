@@ -74,8 +74,8 @@ class MultinomialDirichletBelief:
 			for item in new_updated_states_list:
 				# print(item)
 				item = tuple([int(i) for i in item])
-				self.counts[item] += 1000000
-				counts_vec[self.states_list.index(item)] += 1000000
+				self.counts[item] += 10000000
+				counts_vec[self.states_list.index(item)] += 10000000
 
 
 		return MultinomialDirichletBelief(self.env, np.add(self.alpha,counts_vec))
