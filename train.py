@@ -297,20 +297,21 @@ class Trainer(object):
 		sampled_joint_state = tuple(np.sort(sampled_joint_state))
 		res = np.zeros(len(joint_observation))
 		for i in range(len(joint_observation)):
-			if joint_observation[i][0] is not None and joint_observation[i][1] is None:
-				idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])))
-				chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])[idx]
-				res[i] = self.env.tocellnum[chosen_cell]
-
-			elif joint_observation[i][0] is not None and joint_observation[i][1] is not None:
-				if self.env.occupancy[tuple(self.env.tocellcoord[joint_observation[i][0]] + self.env.directions[
-					joint_observation[i][1]])] ==1:
+			if joint_observation[i] is not None:
+				if joint_observation[i][1] is None:
 					idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])))
 					chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])[idx]
 					res[i] = self.env.tocellnum[chosen_cell]
+
 				else:
-					res[i] = self.env.tocellnum[tuple(self.env.tocellcoord[joint_observation[i][0]] +
-												self.env.directions[joint_observation[i][1]])]
+					if self.env.occupancy[tuple(self.env.tocellcoord[joint_observation[i][0]] + self.env.directions[
+						joint_observation[i][1]])] ==1:
+						idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])))
+						chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])[idx]
+						res[i] = self.env.tocellnum[chosen_cell]
+					else:
+						res[i] = self.env.tocellnum[tuple(self.env.tocellcoord[joint_observation[i][0]] +
+													self.env.directions[joint_observation[i][1]])]
 					
 			else:
 				idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])))
