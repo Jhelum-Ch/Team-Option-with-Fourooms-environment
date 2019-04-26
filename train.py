@@ -165,7 +165,6 @@ class Trainer(object):
 					self.belief.update(joint_observation, old_feasible_states)
 					sampled_joint_state = self.belief.sampleJointState()  # iii
 
-
 				estimated_next_joint_state = self.estimate_next_joint_state(joint_observation,sampled_joint_state)
 				
 				# x - critic evaluation
@@ -173,7 +172,6 @@ class Trainer(object):
 													 action_critic=self.action_critic,
 
 													 joint_state=estimated_next_joint_state, # this should be sampled_next_joint_state, s'_k in the algo
-
 													 joint_option=joint_option,
 													 joint_action=joint_action,
 													 reward=reward,
@@ -184,19 +182,15 @@ class Trainer(object):
 				# xi A
 				self.doc.improveOption(policy_obj=self.intra_option_policy_gradient,
 								  termination_obj=self.termination_gradient,
-
 								  sampled_joint_state=sampled_joint_state,
 								  next_joint_state= next_joint_state,
 								  estimated_next_joint_state =estimated_next_joint_state,
-
 								  joint_option=joint_option,
 								  joint_action=joint_action,
 								  critic_feedback=critic_feedback
 								   )
 				
 				# xi B
-
-				
 
 				next_joint_option, switch = self.doc.chooseOptionOnTermination(self.options, joint_option,
 																			   sampled_joint_state) #TODO: should condition on sampled joint state
@@ -211,6 +205,7 @@ class Trainer(object):
 
 				belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
 				belief_error.append(belief_error_step)
+
 
 				joint_option = next_joint_option
 				
@@ -326,7 +321,7 @@ class Trainer(object):
 		agentOptions = {k: [item[k] for item in listOfOptions] for k in range(numAgents)}
 
 		avg_dur = []
-		count = {k:0 for k in agents}
+		count = {k:0 for k in range(numAgents)}
 		for k in list(agentOptions.keys()):
 		    #print(k)
 		    count[k] = 0

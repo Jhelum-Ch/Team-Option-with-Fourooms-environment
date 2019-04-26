@@ -1,6 +1,10 @@
 from fourroomsEnv import FourroomsMA
 from modelConfig import params, paths
+<<<<<<< HEAD
 from utils.unitTest import testCreateOption, testQ, testSoftmaxOptionPolicy #testActionSelection, testIntraOptionQLearning
+=======
+# from utils.unitTest import testCreateOption, testQ, testSoftmaxOptionPolicy #testActionSelection, testIntraOptionQLearning
+>>>>>>> 48826ef82b860ce6142d604849e7dc2331368dee
 from train import Trainer
 import time
 import os

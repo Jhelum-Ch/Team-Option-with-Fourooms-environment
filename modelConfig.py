@@ -31,7 +31,7 @@ params = {
 		'lr_agent_q'		: 0.01,
 		'lr_theta'			: 0.01,
 		'lr_phi'			: 0.01,
-		'deliberation_cost' : 20
+		'deliberation_cost' : 100
 	}
 }
 

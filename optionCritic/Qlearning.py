@@ -56,12 +56,19 @@ class IntraOptionQLearning:
 			max_idx, max_value = max(all_Q.items(), key=operator.itemgetter(1))
 			
 			return max_value
+<<<<<<< HEAD
 
 
 		if joint_option not in self.weights[joint_state].keys():
 				self.weights[joint_state][joint_option] = 0.0
 		
 		
+=======
+		
+		if joint_option not in self.weights[joint_state].keys():
+				self.weights[joint_state][joint_option] = 0.0
+		
+>>>>>>> 48826ef82b860ce6142d604849e7dc2331368dee
 		return self.weights[joint_state][joint_option]
 	
 	def terminationProbOfAtLeastOneAgent(self, joint_state, joint_option):

@@ -82,15 +82,22 @@ class SoftmaxActionPolicy:
 	def __init__(self, n_states, n_choices, temp=params['policy']['temperature']):
 		'''
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> 987cde61614aea6df206a5a4447651ffc0113243
+=======
+
+>>>>>>> 48826ef82b860ce6142d604849e7dc2331368dee
 		:param n_states: number of encoded individual states
 		:param n_choices: choices over which pmf spreads choice can be either number of primitive actions or options
 		:param temp: lower temperature means uniform distribution, higher means delta
 		'''
 		self.rng = seed
+<<<<<<< HEAD
 
+=======
+>>>>>>> 48826ef82b860ce6142d604849e7dc2331368dee
 		self.weights = np.zeros((n_states, n_choices))  # we assume that n_features and
 		# n_actions for all agents are same
 		self.temp = temp

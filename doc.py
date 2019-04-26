@@ -68,9 +68,13 @@ class DOC:
 		for option in sampled_joint_option:
 			options[option].available = False
 		# return the joint options
+<<<<<<< HEAD
 
 		return sampled_joint_option, np.sum(terminations)
 
+=======
+		return sampled_joint_option, np.sum(terminations)
+>>>>>>> 48826ef82b860ce6142d604849e7dc2331368dee
 	
 	# def chooseOptionOnTermination(self, options, joint_option, joint_state):
 	# 	terminations = []
