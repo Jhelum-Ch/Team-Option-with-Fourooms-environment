@@ -40,7 +40,7 @@ class Trainer(object):
 			# termination for option 0 can be called as	:	options[0].termination.weights
 			
 			terminations = [option.termination for option in self.options]
-			pi_policies = [option.policy for option in self.options]
+			# pi_policies = [option.policy for option in self.options]
 			
 			self.doc = DOC(self.env, self.options, self.mu_policy)
 			
@@ -68,8 +68,8 @@ class Trainer(object):
 									 lr=params['train']['lr_agent_q'],
 									 options=self.options)
 			
-			self.termination_gradient = TerminationGradient(terminations, self.critic)
-			self.intra_option_policy_gradient = IntraOptionGradient(pi_policies)
+			self.termination_gradient = TerminationGradient(self.options, self.critic)
+			self.intra_option_policy_gradient = IntraOptionGradient(self.options)
 			
 			# for _ in range(params['train']['n_episodes']):
 			self.trainEpisodes()
@@ -157,10 +157,12 @@ class Trainer(object):
 				cum_reward = reward + params['env']['discount'] * cum_reward
 				
 				# ix
-				joint_observation = self.env.get_observation(broadcasts)
-				
-				self.belief.update(joint_observation, old_feasible_states)
-				sampled_joint_state = self.belief.sampleJointState()  # iii
+				if iteration == 0:
+					joint_observation = prev_joint_obs
+				else:
+					joint_observation = self.env.get_observation(broadcasts)
+					self.belief.update(joint_observation, old_feasible_states)
+					sampled_joint_state = self.belief.sampleJointState()  # iii
 
 				estimated_next_joint_state = self.estimate_next_joint_state(joint_observation,sampled_joint_state)
 				
@@ -248,7 +250,7 @@ class Trainer(object):
 				optionValues = calcAgentActionValue(self.options)
 				
 				for idx, option in enumerate(self.options):
-					self.writer.add_scalar('option '+str(idx)+':', optionValues[idx], iterations)
+					self.writer.add_scalar('option '+str(idx)+optionValues[idx], iterations)
 					
 					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
@@ -292,7 +294,10 @@ class Trainer(object):
 				else:
 					res[i] = self.env.tocellnum[tuple(self.env.tocellcoord[joint_observation[i][0]] +
 												self.env.directions[joint_observation[i][1]])]
-					
+			elif joint_observation[i][1] == None:
+				idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])))
+				chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])[idx]
+				res[i] = self.env.tocellnum[chosen_cell]
 			else:
 				idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])))
 				# print('neighbour',type(self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])))
