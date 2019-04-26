@@ -142,7 +142,7 @@ class Trainer(object):
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
 				
 				# vii - viii
-				broadcasts = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
+				broadcasts, error_tuple = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
 											 prev_sampled_joint_state = sampled_joint_state,
 											 prev_joint_obs = prev_joint_obs,
 											 prev_true_joint_state = prev_joint_state, 
@@ -152,7 +152,7 @@ class Trainer(object):
 											 critic = self.critic, 
 											 reward = reward)
 				
-				reward += np.sum([i * self.env.broadcast_penalty for i in broadcasts])
+				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
 
 				cum_reward = reward + params['env']['discount'] * cum_reward
 				
