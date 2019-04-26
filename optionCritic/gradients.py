@@ -29,8 +29,8 @@
 from modelConfig import params
 
 class TerminationGradient:
-	def __init__(self, termination, critic, lr=params['train']['lr_phi']):
-		self.termination = termination
+	def __init__(self, options, critic, lr=params['train']['lr_phi']):
+		self.termination = [option.termination for option in options]
 		self.critic = critic
 		self.lr = lr
 
@@ -45,9 +45,9 @@ class TerminationGradient:
 					self.lr*magnitudes*advantage
 # Check this
 class IntraOptionGradient:
-	def __init__(self, pi_policy, lr=params['train']['lr_theta']):
+	def __init__(self, options, lr=params['train']['lr_theta']):
 		self.lr = lr
-		self.pi_policy = pi_policy #as a list of options in use
+		self.pi_policy = [option.policy for option in options] #as a list of options in use
 
 	def update(self, agents, joint_state, joint_option, joint_action, action_critic_value):
 		# joint state refers to sampled joint state, s_k
