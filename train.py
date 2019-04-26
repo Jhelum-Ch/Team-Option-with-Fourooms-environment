@@ -5,7 +5,7 @@ from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearn
 from distributed.belief import MultinomialDirichletBelief
 from optionCritic.gradients import TerminationGradient, IntraOptionGradient
 import numpy as np
-from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue
+from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue, calcAgentActionValue
 from utils.misc import saveModelandMetrics
 from tensorboardX import SummaryWriter
 
@@ -40,7 +40,7 @@ class Trainer(object):
 			# termination for option 0 can be called as	:	options[0].termination.weights
 			
 			terminations = [option.termination for option in self.options]
-			pi_policies = [option.policy for option in self.options]
+			# pi_policies = [option.policy for option in self.options]
 			
 			self.doc = DOC(self.env, self.options, self.mu_policy)
 			
@@ -68,8 +68,8 @@ class Trainer(object):
 									 lr=params['train']['lr_agent_q'],
 									 options=self.options)
 			
-			self.termination_gradient = TerminationGradient(terminations, self.critic)
-			self.intra_option_policy_gradient = IntraOptionGradient(pi_policies)
+			self.termination_gradient = TerminationGradient(self.options, self.critic)
+			self.intra_option_policy_gradient = IntraOptionGradient(self.options)
 			
 			# for _ in range(params['train']['n_episodes']):
 			self.trainEpisodes()
@@ -82,7 +82,6 @@ class Trainer(object):
 		avg_belief_error = []
 		iterations = 0
 		switches = 0
-		avg_dur_from_episode = []
 
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
@@ -121,7 +120,6 @@ class Trainer(object):
 			cum_reward = 0
 			itr_reward = []
 			belief_error = []
-			options_episode = []
 
 			c = 0.0
 			
@@ -135,8 +133,6 @@ class Trainer(object):
 				
 				# for agent in self.env.agents:
 				# 	agent.action = joint_action[agent.ID]
-
-				options_episode.append(joint_option)
 				
 				# v
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
@@ -146,7 +142,7 @@ class Trainer(object):
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
 				
 				# vii - viii
-				broadcasts, errors = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
+				broadcasts = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
 											 prev_sampled_joint_state = sampled_joint_state,
 											 prev_joint_obs = prev_joint_obs,
 											 prev_true_joint_state = prev_joint_state, 
@@ -156,17 +152,19 @@ class Trainer(object):
 											 critic = self.critic, 
 											 reward = reward)
 				
-				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*errors[i] for i in range(len(broadcasts))])
+				reward += np.sum([i * self.env.broadcast_penalty for i in broadcasts])
 
 				cum_reward = reward + params['env']['discount'] * cum_reward
 				
 				# ix
-				joint_observation = self.env.get_observation(broadcasts)
 
-				estimated_next_joint_state = self.estimate_next_joint_state(joint_observation,sampled_joint_state)
-				
-				self.belief.update(joint_observation, old_feasible_states)
-				sampled_joint_state = self.belief.sampleJointState()  # iii
+				if iteration == 0:
+					joint_observation = prev_joint_obs
+				else:
+					joint_observation = self.env.get_observation(broadcasts)
+					self.belief.update(joint_observation, old_feasible_states)
+					sampled_joint_state = self.belief.sampleJointState()  # iii
+
 
 				estimated_next_joint_state = self.estimate_next_joint_state(joint_observation,sampled_joint_state)
 				
@@ -211,11 +209,9 @@ class Trainer(object):
 					c = 0
 				
 
-
-
 				belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
 				belief_error.append(belief_error_step)
-				
+
 				joint_option = next_joint_option
 				
 				prev_joint_state = joint_state
@@ -237,7 +233,6 @@ class Trainer(object):
 				old_feasible_states = self.belief.new_feasible_state(old_feasible_states,joint_observation)
 				
 				
-				
 				itr_reward.append(cum_reward)
 				if not iteration%30 or done:
 					plotReward(itr_reward,'iterations','cumulative reward',self.expt_folder,
@@ -245,25 +240,27 @@ class Trainer(object):
 					
 					plotReward(belief_error, 'iterations', 'error', self.expt_folder,
 							   'belief_error_' + str(episode) + '.png')
-					
-				# tensorboard plots
-				iterations += 1
-				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
-				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
-
-				self.writer.add_scalar('option switches', switches, iterations)
-
 				
 				if done:
 					break
 					
 				critic_Q = calcCriticValue(self.critic.weights)
 				action_critic_Q = calcActionCriticValue(self.action_critic.weights)
-
 				
-				self.writer.add_scalar('Critic_Q_itr', critic_Q, iteration)
-				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iteration)
-				self.writer.add_scalar('Belief_Error_itr', belief_error_step, iteration)
+				# tensorboard plots
+				iterations += 1
+				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
+				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
+				self.writer.add_scalar('option switches', switches, iterations)
+				self.writer.add_scalar('Critic_Q_itr', critic_Q, iterations)
+				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iterations)
+				self.writer.add_scalar('Belief_Error_itr', belief_error_step, iterations)
+				
+				optionValues = calcAgentActionValue(self.options)
+				
+				for idx, option in enumerate(self.options):
+					self.writer.add_scalar('option '+str(idx)+optionValues[idx], iterations)
+					
 					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
 			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
@@ -277,7 +274,6 @@ class Trainer(object):
 			avg_belief_error.append(np.mean(belief_error))
 			plotReward(avg_belief_error, 'episodes', 'mean_belief_error', self.expt_folder,
 				   'mean_belief_error_per_episode.png')
-
 
 			avg_dur = self.calcAverageDurationFromEpisode(options_episode, len(joint_option))
 			avg_dur_from_episode.append(avg_dur)
@@ -324,7 +320,6 @@ class Trainer(object):
 		
 		res = tuple([int(r) for r in res])
 		return res
-
 
 
 	def calcAverageDurationFromEpisode(listOfOptions,numAgents):
