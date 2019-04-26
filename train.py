@@ -322,7 +322,7 @@ class Trainer(object):
 		return res
 
 
-	def calcAverageDurationFromEpisode(listOfOptions,numAgents):
+	def calcAverageDurationFromEpisode(self, listOfOptions,numAgents):
 		agentOptions = {k: [item[k] for item in listOfOptions] for k in range(numAgents)}
 
 		avg_dur = []
