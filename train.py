@@ -82,6 +82,7 @@ class Trainer(object):
 		avg_belief_error = []
 		iterations = 0
 		switches = 0
+		avg_dur_from_episode = []
 
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
