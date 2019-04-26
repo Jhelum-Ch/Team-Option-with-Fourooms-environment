@@ -120,6 +120,7 @@ class Trainer(object):
 			cum_reward = 0
 			itr_reward = []
 			belief_error = []
+			options_episode = []
 
 			c = 0.0
 			
@@ -127,6 +128,8 @@ class Trainer(object):
 
 				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :',
 					  self.env.discovered_goals)
+
+				options_episode.append(joint_option)
 
 				# iv
 				joint_action = self.doc.chooseAction()
@@ -254,7 +257,7 @@ class Trainer(object):
 				optionValues = calcAgentActionValue(self.options)
 				
 				for idx, option in enumerate(self.options):
-					self.writer.add_scalar('option '+str(idx)+optionValues[idx], iterations)
+					self.writer.add_scalar('option '+str(idx)+str(optionValues[idx]), iterations)
 					
 					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
