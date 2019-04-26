@@ -211,6 +211,11 @@ class Trainer(object):
 					c = 0
 				
 
+
+
+				belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
+				belief_error.append(belief_error_step)
+				
 				joint_option = next_joint_option
 				
 				prev_joint_state = joint_state
@@ -231,8 +236,7 @@ class Trainer(object):
 
 				old_feasible_states = self.belief.new_feasible_state(old_feasible_states,joint_observation)
 				
-				belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
-				belief_error.append(belief_error_step)
+				
 				
 				itr_reward.append(cum_reward)
 				if not iteration%30 or done:
@@ -275,7 +279,7 @@ class Trainer(object):
 				   'mean_belief_error_per_episode.png')
 
 
-			avg_dur = calcAverageDurationFromEpisode(options_episode, len(joint_option))
+			avg_dur = self.calcAverageDurationFromEpisode(options_episode, len(joint_option))
 			avg_dur_from_episode.append(avg_dur)
 			
 			# tensorboard plots
