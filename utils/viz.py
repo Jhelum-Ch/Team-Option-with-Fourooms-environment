@@ -34,7 +34,7 @@ def calcCriticValue(nested_dict):
 	Q = []
 	for key in keys:
 		Q.append(max(nested_dict[key].values()))
-	return np.linalg.norm(Q) * 1.0 / len(Q)
+	return np.linalg.norm(Q) #* 1.0 / len(Q)
 
 def calcActionCriticValue(nested_dict):
 	option_keys = list(nested_dict.keys())
