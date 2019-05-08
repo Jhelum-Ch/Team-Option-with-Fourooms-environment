@@ -144,12 +144,16 @@ class MultinomialDirichletBelief:
 			
 			if obs[i] is not None:
 				# print('obs',obs[i])
-				# if obs[i][1] is not None:
-				if self.env.occupancy[tuple(self.env.tocellcoord[obs[i][0]] + self.env.directions[obs[i][1]])] == 1:
-					next_est_state = self.env.tocellnum[tuple(self.env.tocellcoord[obs[i][0]])]
+				if obs[i][1] is not None:
+					if self.env.occupancy[tuple(self.env.tocellcoord[obs[i][0]] + self.env.directions[obs[i][1]])] == 1:
+						next_est_state = self.env.tocellnum[tuple(self.env.tocellcoord[obs[i][0]])]
+					else:
+						next_est_state = self.env.tocellnum[
+							tuple(self.env.tocellcoord[obs[i][0]] + self.env.directions[obs[i][1]])]
 				else:
-					next_est_state = self.env.tocellnum[
-						tuple(self.env.tocellcoord[obs[i][0]] + self.env.directions[obs[i][1]])]
+					idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[obs[i][0]])))
+					chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[obs[i][0]])[idx]
+					next_est_state = self.env.tocellnum[chosen_cell]
 				
 				new_feasible_states.append(next_est_state)
 			else:

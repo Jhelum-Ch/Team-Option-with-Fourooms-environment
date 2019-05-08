@@ -17,6 +17,7 @@ class Broadcast:
         self.no_broadcast_threshold = params['env']['no_broadcast_threshold']
 
         broadcasts = np.zeros(self.env.n_agents)
+        error_tuple = np.zeros(self.env.n_agents)
         
         for agent in self.env.agents:
             estimated_curr_joint_state = np.zeros(self.env.n_agents)
@@ -72,7 +73,7 @@ class Broadcast:
                
 
             error_due_to_no_broadcast = np.linalg.norm([i-j for (i,j) in zip(estimated_own_curr_cell,self.env.tocellcoord[curr_true_joint_state[agent.ID]])])
-         
+            error_tuple[agent.ID] = error_due_to_no_broadcast
             selfishness_penalty = params['env']['selfishness_penalty']*error_due_to_no_broadcast*(error_due_to_no_broadcast > self.no_broadcast_threshold)
             #critic = IntraOptionQLearning(params['env']['discount'], params['doc']['lr_Q'],self.terminations, option_weights)
             
@@ -89,7 +90,8 @@ class Broadcast:
             # q2 = critic2.update(modified_current_joint_state, self.joint_option, reward, self.done)
             # Q_agent_without_broadcast = q2.getQvalue(modified_current_joint_state, None, self.joint_option)
             broadcasts[agent.ID] = 1*((agent.state in self.env.goals) or (Q_agent_with_broadcast >= Q_agent_without_broadcast))
-        return tuple(broadcasts)
+            
+        return tuple(broadcasts), tuple(error_tuple)
 
 
     def randomBroadcast(self, state):

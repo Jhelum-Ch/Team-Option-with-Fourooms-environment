@@ -145,13 +145,17 @@ class DOC:
 		return self.broadcast.broadcastBasedOnQ(critic, reward, curr_true_joint_state, prev_sampled_joint_state, prev_joint_obs, 
 													prev_true_joint_state, prev_joint_action, joint_option,done)
 	
-	def evaluateOption(self, critic, action_critic, joint_state, joint_option, joint_action, reward,
+	def evaluateOption(self, critic, action_critic, agent_q, joint_state, joint_option, joint_action, reward,
 					   done, baseline=False):
 		# Critic update
 		critic.update(joint_state, joint_option, reward, done)
 		action_critic.update(joint_state, joint_option, joint_action, reward, done)
 		
 		critic_feedback = action_critic.getQvalue(joint_state, joint_option, joint_action)  # Q(s,o,a)
+		
+		# update agent Q
+		joint_state_agents = tuple([agent.state for agent in self.env.agents])
+		agent_q.update(joint_state_agents, joint_option, joint_action, reward, done)
 		
 		if baseline:
 			critic_feedback -= critic.value(joint_state, joint_option)

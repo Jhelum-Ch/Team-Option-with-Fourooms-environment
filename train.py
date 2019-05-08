@@ -120,6 +120,7 @@ class Trainer(object):
 			cum_reward = 0
 			itr_reward = []
 			belief_error = []
+			options_episode = []
 
 			c = 0.0
 			
@@ -127,6 +128,8 @@ class Trainer(object):
 
 				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :',
 					  self.env.discovered_goals)
+
+				options_episode.append(joint_option)
 
 				# iv
 				joint_action = self.doc.chooseAction()
@@ -142,7 +145,7 @@ class Trainer(object):
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
 				
 				# vii - viii
-				broadcasts = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
+				broadcasts, error_tuple = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
 											 prev_sampled_joint_state = sampled_joint_state,
 											 prev_joint_obs = prev_joint_obs,
 											 prev_true_joint_state = prev_joint_state, 
@@ -152,11 +155,12 @@ class Trainer(object):
 											 critic = self.critic, 
 											 reward = reward)
 				
-				reward += np.sum([i * self.env.broadcast_penalty for i in broadcasts])
+				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
 
 				cum_reward = reward + params['env']['discount'] * cum_reward
 				
 				# ix
+
 				if iteration == 0:
 					joint_observation = prev_joint_obs
 				else:
@@ -169,6 +173,7 @@ class Trainer(object):
 				# x - critic evaluation
 				critic_feedback = self.doc.evaluateOption(critic=self.critic,
 													 action_critic=self.action_critic,
+
 													 joint_state=estimated_next_joint_state, # this should be sampled_next_joint_state, s'_k in the algo
 													 joint_option=joint_option,
 													 joint_action=joint_action,
@@ -189,7 +194,7 @@ class Trainer(object):
 								   )
 				
 				# xi B
-				
+
 				next_joint_option, switch = self.doc.chooseOptionOnTermination(self.options, joint_option,
 																			   sampled_joint_state) #TODO: should condition on sampled joint state
 				switches += switch
@@ -200,6 +205,10 @@ class Trainer(object):
 				else:
 					c = 0
 				
+
+				belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
+				belief_error.append(belief_error_step)
+
 
 				joint_option = next_joint_option
 				
@@ -221,8 +230,6 @@ class Trainer(object):
 
 				old_feasible_states = self.belief.new_feasible_state(old_feasible_states,joint_observation)
 				
-				belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
-				belief_error.append(belief_error_step)
 				
 				itr_reward.append(cum_reward)
 				if not iteration%30 or done:
@@ -250,7 +257,7 @@ class Trainer(object):
 				optionValues = calcAgentActionValue(self.options)
 				
 				for idx, option in enumerate(self.options):
-					self.writer.add_scalar('option '+str(idx)+optionValues[idx], iterations)
+					self.writer.add_scalar('option '+str(idx)+str(optionValues[idx]), iterations)
 					
 					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
@@ -265,6 +272,9 @@ class Trainer(object):
 			avg_belief_error.append(np.mean(belief_error))
 			plotReward(avg_belief_error, 'episodes', 'mean_belief_error', self.expt_folder,
 				   'mean_belief_error_per_episode.png')
+
+			avg_dur = self.calcAverageDurationFromEpisode(options_episode, len(joint_option))
+			avg_dur_from_episode.append(avg_dur)
 			
 			# tensorboard plots
 			self.writer.add_scalar('cumulative_reward', cum_reward, episode)
@@ -272,6 +282,7 @@ class Trainer(object):
 			self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
 			self.writer.add_scalar('Critic_Q_episode', critic_Q, episode)
 			self.writer.add_scalar('Action_Critic_Q', action_critic_Q, episode)
+			self.writer.add_scalar('average_duration', avg_dur, episode)
 			
 			# Save model
 			saveModelandMetrics(self)
@@ -285,27 +296,44 @@ class Trainer(object):
 		res = np.zeros(len(joint_observation))
 		for i in range(len(joint_observation)):
 			if joint_observation[i] is not None:
-				if self.env.occupancy[tuple(self.env.tocellcoord[joint_observation[i][0]] + self.env.directions[
-					joint_observation[i][1]])] ==1:
+				if joint_observation[i][1] is None:
 					idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])))
-					# print('idx',idx)
 					chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])[idx]
 					res[i] = self.env.tocellnum[chosen_cell]
+
 				else:
-					res[i] = self.env.tocellnum[tuple(self.env.tocellcoord[joint_observation[i][0]] +
-												self.env.directions[joint_observation[i][1]])]
-			elif joint_observation[i][1] == None:
-				idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])))
-				chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])[idx]
-				res[i] = self.env.tocellnum[chosen_cell]
+					if self.env.occupancy[tuple(self.env.tocellcoord[joint_observation[i][0]] + self.env.directions[
+						joint_observation[i][1]])] ==1:
+						idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])))
+						chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])[idx]
+						res[i] = self.env.tocellnum[chosen_cell]
+					else:
+						res[i] = self.env.tocellnum[tuple(self.env.tocellcoord[joint_observation[i][0]] +
+													self.env.directions[joint_observation[i][1]])]
+					
 			else:
 				idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])))
-				# print('neighbour',type(self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])))
 				chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])[idx]
 				res[i] = self.env.tocellnum[chosen_cell]
 		
 		res = tuple([int(r) for r in res])
 		return res
+
+
+	def calcAverageDurationFromEpisode(self, listOfOptions,numAgents):
+		agentOptions = {k: [item[k] for item in listOfOptions] for k in range(numAgents)}
+
+		avg_dur = []
+		count = {k:0 for k in range(numAgents)}
+		for k in list(agentOptions.keys()):
+		    #print(k)
+		    count[k] = 0
+		    for i in range(len(agentOptions[k][:-1])):
+		        if agentOptions[k][i] != agentOptions[k][i+1]:
+		            count[k] += 1
+		    avg_dur.append(count[k]/(len(listOfOptions)-1))
+		return avg_dur
+
 
 
 
