@@ -8,6 +8,8 @@ import numpy as np
 from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue, calcAgentActionValue
 from utils.misc import saveModelandMetrics
 from tensorboardX import SummaryWriter
+import pickle
+import os
 
 
 class Trainer(object):
@@ -82,9 +84,12 @@ class Trainer(object):
 		avg_belief_error = []
 		iterations = 0
 		switches = 0
+		avg_dur_from_episode = []
 
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
+			
+			params['policy']['temperature'] = 0.5
 			
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# # 'f'] in modelConfig remains unchanged
@@ -125,6 +130,9 @@ class Trainer(object):
 			c = 0.0
 			
 			for iteration in range(params['env']['episode_length']):
+				
+				if iteration > 100 and iteration % 100 == 0 and params['policy']['temperature'] <= 1:
+					params['policy']['temperature'] += 0.1
 
 				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :',
 					  self.env.discovered_goals)
@@ -155,7 +163,7 @@ class Trainer(object):
 											 critic = self.critic, 
 											 reward = reward)
 				
-				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
+				# reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
 
 				cum_reward = reward + params['env']['discount'] * cum_reward
 				
@@ -173,7 +181,7 @@ class Trainer(object):
 				# x - critic evaluation
 				critic_feedback = self.doc.evaluateOption(critic=self.critic,
 													 action_critic=self.action_critic,
-
+													 agent_q = self.agent_q,
 													 joint_state=estimated_next_joint_state, # this should be sampled_next_joint_state, s'_k in the algo
 													 joint_option=joint_option,
 													 joint_action=joint_action,
@@ -256,8 +264,8 @@ class Trainer(object):
 				
 				optionValues = calcAgentActionValue(self.options)
 				
-				for idx, option in enumerate(self.options):
-					self.writer.add_scalar('option '+str(idx)+str(optionValues[idx]), iterations)
+				# for idx, option in enumerate(self.options):
+				# 	self.writer.add_scalar( 'option '+str(idx), iterations)
 					
 					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
@@ -282,11 +290,15 @@ class Trainer(object):
 			self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
 			self.writer.add_scalar('Critic_Q_episode', critic_Q, episode)
 			self.writer.add_scalar('Action_Critic_Q', action_critic_Q, episode)
-			self.writer.add_scalar('average_duration', avg_dur, episode)
+			# self.writer.add_scalar('average_duration', avg_dur, episode)
 			
 			# Save model
 			saveModelandMetrics(self)
 			
+			with open(os.path.join(self.expt_folder, 'avg_dur_all_episodes.pkl'), 'wb') as f:
+				pickle.dump(avg_dur_from_episode, f)
+			
+			#TODO: Plot in average duration tensorboard
 			
 			#TODO: save checkpoint
 
@@ -326,12 +338,12 @@ class Trainer(object):
 		avg_dur = []
 		count = {k:0 for k in range(numAgents)}
 		for k in list(agentOptions.keys()):
-		    #print(k)
-		    count[k] = 0
-		    for i in range(len(agentOptions[k][:-1])):
-		        if agentOptions[k][i] != agentOptions[k][i+1]:
-		            count[k] += 1
-		    avg_dur.append(count[k]/(len(listOfOptions)-1))
+			#print(k)
+			count[k] = 0
+			for i in range(len(agentOptions[k][:-1])):
+				if agentOptions[k][i] != agentOptions[k][i+1]:
+					count[k] += 1
+			avg_dur.append(count[k]/(len(listOfOptions)-1))
 		return avg_dur
 
 
