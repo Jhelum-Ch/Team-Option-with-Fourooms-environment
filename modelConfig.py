@@ -26,11 +26,11 @@ params = {
 		'n_steps' 		: 	1000,
 		'seed'			:	1234,
 		# 'discount'		:	0.1,
-		'lr_critic'		: 	0.01,	#alpha_Q
-		'lr_action_critic'	: 0.01,
-		'lr_agent_q'		: 0.01,
-		'lr_theta'			: 0.01,
-		'lr_phi'			: 0.01,
+		'lr_critic'		: 	0.1,	#alpha_Q
+		'lr_action_critic'	: 0.1,
+		'lr_agent_q'		: 0.1,
+		'lr_theta'			: 0.1,
+		'lr_phi'			: 0.1,
 		'deliberation_cost' : 0.1
 	}
 }
