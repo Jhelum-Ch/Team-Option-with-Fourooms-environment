@@ -17,12 +17,12 @@ params = {
 		'n_actions'	:	4
 	},
 	'policy'	:	{
-		'temperature'	: 1.0
+		'temperature'	: 0.5
 	},
 	'train': {
 		'n_runs'		: 	1,
 		# 'n_epochs'		: 	50,
-		'n_episodes'	:	100,
+		'n_episodes'	:	200,
 		'n_steps' 		: 	1000,
 		'seed'			:	1234,
 		# 'discount'		:	0.1,
@@ -31,7 +31,7 @@ params = {
 		'lr_agent_q'		: 0.01,
 		'lr_theta'			: 0.01,
 		'lr_phi'			: 0.01,
-		'deliberation_cost' : 100
+		'deliberation_cost' : 0.1
 	}
 }
 
