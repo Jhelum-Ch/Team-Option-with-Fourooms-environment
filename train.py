@@ -134,7 +134,7 @@ class Trainer(object):
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
 			
-			params['policy']['temperature'] = 0.5
+			params['policy']['temperature'] = 0.6
 			
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# # 'f'] in modelConfig remains unchanged
@@ -210,7 +210,7 @@ class Trainer(object):
 											 critic = self.critic, 
 											 reward = reward)
 				
-				# reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
+				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
 
 				cum_reward = reward + params['env']['discount'] * cum_reward
 				
@@ -261,8 +261,8 @@ class Trainer(object):
 					c = 0
 				
 
-				belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
-				belief_error.append(belief_error_step)
+				# belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
+				# belief_error.append(belief_error_step)
 
 
 				joint_option = next_joint_option
@@ -307,7 +307,7 @@ class Trainer(object):
 				self.writer.add_scalar('option switches', switches, iterations)
 				self.writer.add_scalar('Critic_Q_itr', critic_Q, iterations)
 				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iterations)
-				self.writer.add_scalar('Belief_Error_itr', belief_error_step, iterations)
+				# self.writer.add_scalar('Belief_Error_itr', belief_error_step, iterations)
 				
 				optionValues = calcAgentActionValue(self.options)
 				
