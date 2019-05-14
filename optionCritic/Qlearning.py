@@ -220,9 +220,9 @@ class AgentQLearning:
 			tderror = update_target[idx] - self.value(last_state, last_option, last_action)
 			self.options[last_option].policy.weights[last_state, last_action] += self.lr * tderror
 
-		self.last_state = joint_state
-		self.last_option = joint_option
-		self.last_action = joint_action
+		self.last_joint_state = joint_state
+		self.last_joint_option = joint_option
+		self.last_joint_action = joint_action
 		
 		
 		
