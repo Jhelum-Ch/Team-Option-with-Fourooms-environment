@@ -194,7 +194,7 @@ class Trainer(object):
 				
 				# v
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
-				reward += reward + c
+				reward += c
 				# cum_reward += reward
 				
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
