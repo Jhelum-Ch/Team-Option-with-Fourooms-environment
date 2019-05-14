@@ -24,13 +24,13 @@ params = {
 		# 'n_epochs'		: 	50,
 		'n_episodes'	:	200,
 		'n_steps' 		: 	1000,
-		'seed'			:	1234,
+		'seed'			:	1221,
 		# 'discount'		:	0.1,
-		'lr_critic'		: 	0.1,	#alpha_Q
-		'lr_action_critic'	: 0.1,
-		'lr_agent_q'		: 0.1,
-		'lr_theta'			: 0.1,
-		'lr_phi'			: 0.1,
+		'lr_critic'		: 	0.5,	#alpha_Q
+		'lr_action_critic'	: 0.5,
+		'lr_agent_q'		: 0.5,
+		'lr_theta'			: 0.5,
+		'lr_phi'			: 0.5,
 		'deliberation_cost' : 0.1
 	}
 }
