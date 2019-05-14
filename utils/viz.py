@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 import os
 import numpy as np
+from modelConfig import params
 
 def plotReward(cum_reward, xlabel, ylabel, location, title):
 
@@ -34,7 +35,16 @@ def calcCriticValue(nested_dict):
 	Q = []
 	for key in keys:
 		Q.append(max(nested_dict[key].values()))
-	return np.linalg.norm(Q) #* 1.0 / len(Q)
+	return np.linalg.norm(Q) * 1.0 / len(Q)
+
+# def calcActionCriticValue(nested_dict):
+# 	state_keys = list(nested_dict.keys())
+# 	Q = []
+# 	for state_key in state_keys:
+# 		option_keys = list(nested_dict[state_key].keys())
+# 		for option in range(params['agent']['n_options']):
+# 			Q.append(sum(nested_dict[o_key][a_key].values())
+# 	return total_Q
 
 def calcActionCriticValue(nested_dict):
 	option_keys = list(nested_dict.keys())
@@ -52,3 +62,7 @@ def calcAgentActionValue(options):
 	return action_values
 
 #TODO : visualize options
+
+def calcOptionValue(option_Q):
+	v = np.max(option_Q, axis=1)
+	return np.linalg.norm(v) * 1.0 / v.shape[0]
