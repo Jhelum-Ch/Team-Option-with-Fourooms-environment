@@ -4,7 +4,7 @@ params = {
 	'env'	:	{
 		'n_agents'			:	3,
 		'goal_reward' 		:	 1,
-		'broadcast_penalty'	:  -0.03,
+		'broadcast_penalty'	:  -0.02,
 		'collision_penalty' :  -0.01,
 		'episode_length'	: 	1000,
 		'no_broadcast_threshold'	: 0.01,	#TODO : tune
@@ -17,7 +17,7 @@ params = {
 		'n_actions'	:	4
 	},
 	'policy'	:	{
-		'temperature'	: 0.5
+		'temperature'	: 0.6
 	},
 	'train': {
 		'n_runs'		: 	1,
