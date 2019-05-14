@@ -5,7 +5,7 @@ from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearn
 from distributed.belief import MultinomialDirichletBelief
 from optionCritic.gradients import TerminationGradient, IntraOptionGradient
 import numpy as np
-from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue, calcAgentActionValue
+from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue, calcAgentActionValue, calcOptionValue
 from utils.misc import saveModelandMetrics
 from tensorboardX import SummaryWriter
 import pickle
@@ -169,7 +169,7 @@ class Trainer(object):
 			# done = False
 			cum_reward = 0
 			itr_reward = []
-			belief_error = []
+			# belief_error = []
 			options_episode = []
 			itr_critic_Q = []
 			itr_action_critic_Q = []
@@ -252,13 +252,13 @@ class Trainer(object):
 
 				next_joint_option, switch = self.doc.chooseOptionOnTermination(self.options, joint_option,
 																			   sampled_joint_state) #TODO: should condition on sampled joint state
-				switches += switch
+				# switches += switch
 				# change_in_options = [currJO != nextJO for (currJO,nextJO) in zip(joint_option,next_joint_option)]
 
-				if switch:
-					c = 0.0001*params['train']['deliberation_cost']*switch
-				else:
-					c = 0
+				# if switch:
+				# 	c = 0.0001*params['train']['deliberation_cost']*switch
+				# else:
+				# 	c = 0
 				
 
 				# belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
@@ -287,12 +287,12 @@ class Trainer(object):
 				
 				
 				itr_reward.append(cum_reward)
-				if not iteration%30 or done:
+				if not iteration%100 or done:
 					plotReward(itr_reward,'iterations','cumulative reward',self.expt_folder,
 							   'iteration_reward_'+ str(episode) +'.png')
 					
-					plotReward(belief_error, 'iterations', 'error', self.expt_folder,
-							   'belief_error_' + str(episode) + '.png')
+					# plotReward(belief_error, 'iterations', 'error', self.expt_folder,
+					# 		   'belief_error_' + str(episode) + '.png')
 				
 				if done:
 					break
@@ -311,11 +311,13 @@ class Trainer(object):
 				
 				optionValues = calcAgentActionValue(self.options)
 				
-				# for idx, option in enumerate(self.options):
-				# 	self.writer.add_scalar( 'option '+str(idx), option.policy.weights, iterations)
+				for idx, option in enumerate(self.options):
+					self.writer.add_scalar( 'option '+str(idx), calcOptionValue(option.policy.weights), iterations)
 			
 				itr_critic_Q.append(critic_Q)
 				itr_action_critic_Q.append(action_critic_Q)
+				# if iteration == 1:
+				# 	break
 					
 			sum_of_rewards_per_episode.append(itr_reward[-1])
 			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
@@ -326,17 +328,17 @@ class Trainer(object):
 			plotReward(episode_length, 'episodes', 'length', self.expt_folder,
 				   'episode_length.png')
 			
-			avg_belief_error.append(np.mean(belief_error))
-			plotReward(avg_belief_error, 'episodes', 'mean_belief_error', self.expt_folder,
-				   'mean_belief_error_per_episode.png')
+			# avg_belief_error.append(np.mean(belief_error))
+			# plotReward(avg_belief_error, 'episodes', 'mean_belief_error', self.expt_folder,
+			# 	   'mean_belief_error_per_episode.png')
 
-			avg_dur = self.calcAverageDurationFromEpisode(options_episode, len(joint_option))
-			avg_dur_from_episode.append(avg_dur)
+			# avg_dur = self.calcAverageDurationFromEpisode(options_episode, len(joint_option))
+			# avg_dur_from_episode.append(avg_dur)
 			
 			# tensorboard plots
 			self.writer.add_scalar('cumulative_reward', cum_reward, episode)
 			self.writer.add_scalar('episode_length', len(itr_reward), episode)
-			self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
+			# self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
 			self.writer.add_scalar('Critic_Q_episode', np.mean(itr_critic_Q), episode)
 			self.writer.add_scalar('Action_Critic_Q', np.mean(itr_action_critic_Q), episode)
 			# self.writer.add_scalar('average_duration', avg_dur, episode)
@@ -347,8 +349,8 @@ class Trainer(object):
 			# Save model
 			saveModelandMetrics(self)
 			
-			with open(os.path.join(self.expt_folder, 'avg_dur_all_episodes.pkl'), 'wb') as f:
-				pickle.dump(avg_dur_from_episode, f)
+			# with open(os.path.join(self.expt_folder, 'avg_dur_all_episodes.pkl'), 'wb') as f:
+			# 	pickle.dump(avg_dur_from_episode, f)
 				
 			with open(os.path.join(self.expt_folder, 'episode_critic_Q.pkl'), 'wb') as f:
 				pickle.dump(episode_critic_Q, f)
