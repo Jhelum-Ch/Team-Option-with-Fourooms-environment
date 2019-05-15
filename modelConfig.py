@@ -17,7 +17,7 @@ params = {
 		'n_actions'	:	4
 	},
 	'policy'	:	{
-		'temperature'	: 0.6
+		'temperature'	: 1
 	},
 	'train': {
 		'n_runs'		: 	1,
