@@ -129,7 +129,7 @@ class Trainer(object):
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
 			
-			params['policy']['temperature'] = 0.6
+			params['policy']['temperature'] = 1
 			
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# # 'f'] in modelConfig remains unchanged
@@ -162,8 +162,8 @@ class Trainer(object):
 			
 			for iteration in range(params['env']['episode_length']):
 				
-				if iteration > 100 and iteration % 100 == 0 and params['policy']['temperature'] < 1:
-					params['policy']['temperature'] += 0.1
+				# if iteration > 100 and iteration % 100 == 0 and params['policy']['temperature'] < 1:
+				# 	params['policy']['temperature'] += 0.1
 
 				if iteration % 50 == 0:
 					print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :', self.env.discovered_goals)
