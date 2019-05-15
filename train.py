@@ -28,7 +28,7 @@ class Trainer(object):
 					idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])))
 					chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[joint_observation[i][0]])[idx]
 					res[i] = self.env.tocellnum[chosen_cell]
-				
+
 				else:
 					if self.env.occupancy[tuple(self.env.tocellcoord[joint_observation[i][0]] + self.env.directions[
 						joint_observation[i][1]])] == 1:
@@ -39,28 +39,28 @@ class Trainer(object):
 					else:
 						res[i] = self.env.tocellnum[tuple(self.env.tocellcoord[joint_observation[i][0]] +
 														  self.env.directions[joint_observation[i][1]])]
-			
+
 			else:
 				idx = np.random.choice(len(self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])))
 				chosen_cell = self.env.empty_adjacent(self.env.tocellcoord[sampled_joint_state[i]])[idx]
 				res[i] = self.env.tocellnum[chosen_cell]
-		
+
 		res = tuple([int(r) for r in res])
 		return res
 	
-	def calcAverageDurationFromEpisode(self, listOfOptions, numAgents):
-		agentOptions = {k: [item[k] for item in listOfOptions] for k in range(numAgents)}
-		
-		avg_dur = []
-		count = {k: 0 for k in range(numAgents)}
-		for k in list(agentOptions.keys()):
-			# print(k)
-			count[k] = 0
-			for i in range(len(agentOptions[k][:-1])):
-				if agentOptions[k][i] != agentOptions[k][i + 1]:
-					count[k] += 1
-			avg_dur.append(count[k] / (len(listOfOptions) - 1))
-		return avg_dur
+	# def calcAverageDurationFromEpisode(self, listOfOptions, numAgents):
+	# 	agentOptions = {k: [item[k] for item in listOfOptions] for k in range(numAgents)}
+	#
+	# 	avg_dur = []
+	# 	count = {k: 0 for k in range(numAgents)}
+	# 	for k in list(agentOptions.keys()):
+	# 		# print(k)
+	# 		count[k] = 0
+	# 		for i in range(len(agentOptions[k][:-1])):
+	# 			if agentOptions[k][i] != agentOptions[k][i + 1]:
+	# 				count[k] += 1
+	# 		avg_dur.append(count[k] / (len(listOfOptions) - 1))
+	# 	return avg_dur
 		
 	def train(self):
 		for _ in range(params['train']['n_runs']):
@@ -121,13 +121,8 @@ class Trainer(object):
 			
 
 	def trainEpisodes(self):
-		
-		sum_of_rewards_per_episode = []
-		episode_length = []
-		avg_belief_error = []
+
 		iterations = 0
-		switches = 0
-		avg_dur_from_episode = []
 		episode_critic_Q = []
 		episode_action_critic_Q = []
 
@@ -152,10 +147,6 @@ class Trainer(object):
 			# d. Choose joint-option o based on softmax option-policy mu
 			joint_option = self.doc.initializeOption(joint_state=joint_state)
 
-			# # make the elected options unavailable
-			# for option in joint_option:
-			# 	self.options[option].available = False
-
 			# joint action
 			joint_action = self.doc.chooseAction()
 
@@ -163,39 +154,25 @@ class Trainer(object):
 			self.action_critic.start(joint_state,joint_option,joint_action)
 			self.agent_q.start(joint_state, joint_option, joint_action)
 			
-			# termination_gradient = TerminationGradient(terminations, critic)
-			# intra_option_policy_gradient = IntraOptionGradient(pi_policies)
-			
 			# done = False
 			cum_reward = 0
-			itr_reward = []
-			# belief_error = []
-			options_episode = []
 			itr_critic_Q = []
 			itr_action_critic_Q = []
-
 			c = 0.0
 			
 			for iteration in range(params['env']['episode_length']):
 				
-				if iteration > 100 and iteration % 100 == 0 and params['policy']['temperature'] <= 1:
+				if iteration > 100 and iteration % 100 == 0 and params['policy']['temperature'] < 1:
 					params['policy']['temperature'] += 0.1
 
-				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :',
-					  self.env.discovered_goals)
+				if iteration % 50 == 0:
+					print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :', self.env.discovered_goals)
 
-				options_episode.append(joint_option)
 
-				# iv
 				joint_action = self.doc.chooseAction()
-				
-				# for agent in self.env.agents:
-				# 	agent.action = joint_action[agent.ID]
-				
-				# v
+
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
 				reward += c
-				# cum_reward += reward
 				
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
 				
@@ -213,19 +190,17 @@ class Trainer(object):
 				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
 
 				cum_reward = reward + params['env']['discount'] * cum_reward
-				
-				# ix
 
 				if iteration == 0:
 					joint_observation = prev_joint_obs
 				else:
 					joint_observation = self.env.get_observation(broadcasts)
 					self.belief.update(joint_observation, old_feasible_states)
-					sampled_joint_state = self.belief.sampleJointState()  # iii
+					sampled_joint_state = self.belief.sampleJointState()
 
 				estimated_next_joint_state = self.estimate_next_joint_state(joint_observation,sampled_joint_state)
 				
-				# x - critic evaluation
+				# critic evaluation
 				critic_feedback = self.doc.evaluateOption(critic=self.critic,
 													 action_critic=self.action_critic,
 													 agent_q = self.agent_q,
@@ -249,21 +224,7 @@ class Trainer(object):
 								   )
 				
 				# xi B
-
-				next_joint_option, switch = self.doc.chooseOptionOnTermination(self.options, joint_option,
-																			   sampled_joint_state) #TODO: should condition on sampled joint state
-				# switches += switch
-				# change_in_options = [currJO != nextJO for (currJO,nextJO) in zip(joint_option,next_joint_option)]
-
-				# if switch:
-				# 	c = 0.0001*params['train']['deliberation_cost']*switch
-				# else:
-				# 	c = 0
-				
-
-				# belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
-				# belief_error.append(belief_error_step)
-
+				next_joint_option, switch = self.doc.chooseOptionOnTermination(self.options, joint_option, sampled_joint_state)
 
 				joint_option = next_joint_option
 				
@@ -274,26 +235,9 @@ class Trainer(object):
 
 
 				prev_joint_action = joint_action
-				
-				# self.belief.update(joint_observation,old_feasible_states)
-				# sampled_joint_state = self.belief.sampleJointState() # iii
-				
-				# true_state_tocells = ([self.env.tocellcoord[s] for s in joint_state])
-				# sampled_state_tocells = ([self.env.tocellcoord[s] for s in sampled_joint_state])
-				# print('true joint state : ', true_state_tocells, 'sampled joint state :', sampled_state_tocells)
-				
 
 				old_feasible_states = self.belief.new_feasible_state(old_feasible_states,joint_observation)
-				
-				
-				itr_reward.append(cum_reward)
-				if not iteration%100 or done:
-					plotReward(itr_reward,'iterations','cumulative reward',self.expt_folder,
-							   'iteration_reward_'+ str(episode) +'.png')
-					
-					# plotReward(belief_error, 'iterations', 'error', self.expt_folder,
-					# 		   'belief_error_' + str(episode) + '.png')
-				
+
 				if done:
 					break
 					
@@ -304,61 +248,31 @@ class Trainer(object):
 				iterations += 1
 				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
 				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
-				self.writer.add_scalar('option switches', switches, iterations)
 				self.writer.add_scalar('Critic_Q_itr', critic_Q, iterations)
 				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iterations)
-				# self.writer.add_scalar('Belief_Error_itr', belief_error_step, iterations)
 				
-				optionValues = calcAgentActionValue(self.options)
+				# optionValues = calcAgentActionValue(self.options)
 				
 				for idx, option in enumerate(self.options):
 					self.writer.add_scalar( 'option '+str(idx), calcOptionValue(option.policy.weights), iterations)
 			
 				itr_critic_Q.append(critic_Q)
 				itr_action_critic_Q.append(action_critic_Q)
-				# if iteration == 1:
-				# 	break
-					
-			sum_of_rewards_per_episode.append(itr_reward[-1])
-			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
-					   'reward_per_episode.png')
-			
-			episode_length.append(len(itr_reward))
-			print('episode length :', episode_length)
-			plotReward(episode_length, 'episodes', 'length', self.expt_folder,
-				   'episode_length.png')
-			
-			# avg_belief_error.append(np.mean(belief_error))
-			# plotReward(avg_belief_error, 'episodes', 'mean_belief_error', self.expt_folder,
-			# 	   'mean_belief_error_per_episode.png')
+				if iteration == 1:
+					break
 
-			# avg_dur = self.calcAverageDurationFromEpisode(options_episode, len(joint_option))
-			# avg_dur_from_episode.append(avg_dur)
-			
 			# tensorboard plots
 			self.writer.add_scalar('cumulative_reward', cum_reward, episode)
-			self.writer.add_scalar('episode_length', len(itr_reward), episode)
-			# self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
+			self.writer.add_scalar('episode_length', iteration, episode)
 			self.writer.add_scalar('Critic_Q_episode', np.mean(itr_critic_Q), episode)
 			self.writer.add_scalar('Action_Critic_Q', np.mean(itr_action_critic_Q), episode)
-			# self.writer.add_scalar('average_duration', avg_dur, episode)
-			
-			episode_critic_Q.append(np.mean(itr_critic_Q))
-			episode_action_critic_Q.append(np.mean(itr_action_critic_Q))
-			
+
 			# Save model
-			saveModelandMetrics(self)
-			
-			# with open(os.path.join(self.expt_folder, 'avg_dur_all_episodes.pkl'), 'wb') as f:
-			# 	pickle.dump(avg_dur_from_episode, f)
-				
-			with open(os.path.join(self.expt_folder, 'episode_critic_Q.pkl'), 'wb') as f:
-				pickle.dump(episode_critic_Q, f)
-				
-			with open(os.path.join(self.expt_folder, 'episode_action_critic_Q.pkl'), 'wb') as f:
-				pickle.dump(episode_action_critic_Q, f)
-				
-			
+			if episode == params['train']['n_episodes'] - 1:
+				saveModelandMetrics(self)
+			elif episode % 5 == 0:
+				saveModelandMetrics(self)
+
 			#TODO: Plot in average duration tensorboard
 
 
