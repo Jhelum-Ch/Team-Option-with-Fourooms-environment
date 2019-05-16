@@ -75,7 +75,6 @@ class Trainer(object):
 			# deliberation cost 
 
 			# eta = params['train']['deliberation_cost']
-		
 			
 			# create option pool
 			self.options, self.mu_policy = createOptions(self.env)
@@ -85,19 +84,8 @@ class Trainer(object):
 			# termination for option 0 can be called as	:	options[0].termination.weights
 			
 			terminations = [option.termination for option in self.options]
-			# pi_policies = [option.policy for option in self.options]
 			
 			self.doc = DOC(self.env, self.options, self.mu_policy)
-			
-			# # d. Choose joint-option o based on softmax option-policy mu
-			# joint_option = self.doc.initializeOption(joint_state=joint_state)
-			
-			# # make the elected options unavailable
-			# for option in joint_option:
-			# 	self.options[option].available = False
-			
-			# joint action
-			# joint_action = self.doc.chooseAction()
 			
 			self.critic = IntraOptionQLearning(discount=params['env']['discount'],
 										  lr=params['train']['lr_critic'],
@@ -115,25 +103,31 @@ class Trainer(object):
 			
 			self.termination_gradient = TerminationGradient(self.options, self.critic)
 			self.intra_option_policy_gradient = IntraOptionGradient(self.options)
-			
-			# for _ in range(params['train']['n_episodes']):
+
 			self.trainEpisodes()
 			
 
 	def trainEpisodes(self):
 
 		iterations = 0
-		episode_critic_Q = []
-		episode_action_critic_Q = []
+		# episode_critic_Q = []
+		# episode_action_critic_Q = []
+
+		params['policy']['temperature'] = 1
 
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
 			
-			params['policy']['temperature'] = 1
+			# params['policy']['temperature'] = 1
+			if params['policy']['temperature'] > 0.1:
+				params['policy']['temperature'] -= 0.1
+			else:
+				params['policy']['temperature'] = 0.01
 			
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# # 'f'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
+			print('Initial State:',joint_state)
 			prev_joint_state = joint_state
 			prev_joint_obs = [(joint_state[i],None) for i in range(self.env.n_agents)]
 			prev_joint_action = tuple([None for _ in range(self.env.n_agents)])
@@ -162,8 +156,11 @@ class Trainer(object):
 			
 			for iteration in range(params['env']['episode_length']):
 				
-				# if iteration > 100 and iteration % 100 == 0 and params['policy']['temperature'] < 1:
-				# 	params['policy']['temperature'] += 0.1
+				if iteration > 50 and iteration % 20 == 0:
+					if params['policy']['temperature'] > 0.1:
+						params['policy']['temperature'] -= 0.1
+					else:
+						params['policy']['temperature'] = 0.01
 
 				if iteration % 50 == 0:
 					print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :', self.env.discovered_goals)
@@ -241,7 +238,7 @@ class Trainer(object):
 				if done:
 					break
 					
-				critic_Q = calcCriticValue(self.critic.weights)
+				critic_Q, supNormQ = calcCriticValue(self.critic.weights)
 				action_critic_Q = calcActionCriticValue(self.action_critic.weights)
 				
 				# tensorboard plots
@@ -249,6 +246,7 @@ class Trainer(object):
 				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
 				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
 				self.writer.add_scalar('Critic_Q_itr', critic_Q, iterations)
+				self.writer.add_scalar('Critic_Q_supNorm', supNormQ, iterations)
 				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iterations)
 				
 				# optionValues = calcAgentActionValue(self.options)
@@ -256,16 +254,18 @@ class Trainer(object):
 				for idx, option in enumerate(self.options):
 					self.writer.add_scalar( 'option '+str(idx), calcOptionValue(option.policy.weights), iterations)
 			
-				itr_critic_Q.append(critic_Q)
-				itr_action_critic_Q.append(action_critic_Q)
-				if iteration == 1:
-					break
+				# itr_critic_Q.append(critic_Q)
+				# itr_action_critic_Q.append(action_critic_Q)
+
+				# if iteration == 1:
+				# 	break
 
 			# tensorboard plots
 			self.writer.add_scalar('cumulative_reward', cum_reward, episode)
 			self.writer.add_scalar('episode_length', iteration, episode)
-			self.writer.add_scalar('Critic_Q_episode', np.mean(itr_critic_Q), episode)
-			self.writer.add_scalar('Action_Critic_Q', np.mean(itr_action_critic_Q), episode)
+			# self.writer.add_scalar('Critic_Q_episode', np.mean(itr_critic_Q), episode)
+			self.writer.add_scalar('Critic_Q_episode', critic_Q, episode)
+			# self.writer.add_scalar('Action_Critic_Q', np.mean(itr_action_critic_Q), episode)
 
 			# Save model
 			if episode == params['train']['n_episodes'] - 1:
