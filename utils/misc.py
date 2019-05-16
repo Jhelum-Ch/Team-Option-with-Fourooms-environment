@@ -2,7 +2,6 @@ import json
 import numpy as np
 import os
 import modelConfig
-import dill
 import pickle
 
 def saveModelandMetrics(modelObj):
