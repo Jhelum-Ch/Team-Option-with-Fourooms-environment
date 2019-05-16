@@ -336,7 +336,7 @@ class Trainer(object):
 			# Save model
 			saveModelandMetrics(self)
 
-			return (episode, iteration, cum_reward, calcCriticValue(self.critic.weights), np.array(switch_agent)/iteration)
+			#return (episode, iteration, cum_reward, calcCriticValue(self.critic.weights), np.array(switch_agent)/iteration)
 			
 			
 			#TODO: save checkpoint

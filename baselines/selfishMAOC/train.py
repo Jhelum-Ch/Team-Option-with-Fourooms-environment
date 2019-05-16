@@ -23,15 +23,15 @@ class Trainer(object):
 		self.steps_from_episode = np.zeros((params['train']['n_runs'],params['train']['n_episodes']))
 		self.cum_rew_from_episode = np.zeros((params['train']['n_runs'],params['train']['n_episodes']))
 		self.critic_from_episode = np.zeros((params['train']['n_runs'],params['train']['n_episodes']))
-		self.avg_dur_from_episode = np.zeros((params['train']['n_runs'],params['train']['n_episodes']))
+		self.avg_dur_from_episode = np.zeros((params['train']['n_runs'],params['train']['n_episodes'], params['env']['n_agents']))
 
 		
 	def train(self):
-		for _ in range(params['train']['n_runs']):
+		for run in range(params['train']['n_runs']):
 			# put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# 'seed'] in modelConfig remains unchanged
+			self.run = run
 			
-			features = Tabular(self.env.observation_space.n)
 			n_agent_states, n_actions = len(self.env.cell_list), params['agent']['n_actions']
 
 			# create option pool
@@ -77,10 +77,10 @@ class Trainer(object):
 
 		
 		# Plots to report	
-		avg_len_epi = np.mean(steps_from_episode, axis=0)
-		avg_cum_rew = np.mean(cum_rew_from_episode, axis=0)
-		avg_crtic = np.mean(critic_from_episode, axis=0)
-		avg_dur = np.mean(avg_dur_from_episode, axis=0)
+		avg_len_epi = np.mean(self.steps_from_episode, axis=0)
+		avg_cum_rew = np.mean(self.cum_rew_from_episode, axis=0)
+		avg_crtic = np.mean(self.critic_from_episode, axis=0)
+		avg_dur = np.mean(self.avg_dur_from_episode, axis=0)
 
 			
 
@@ -132,6 +132,16 @@ class Trainer(object):
 			c = 0.0
 			
 			for iteration in range(params['env']['episode_length']):
+
+				if iteration > 50 and iteration % 20 == 0:
+					if params['policy']['temperature'] > 0.1:
+						params['policy']['temperature'] -= 0.1
+					else:
+						params['policy']['temperature'] = 0.01
+
+				if iteration % 50 == 0:
+					print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :', self.env.discovered_goals)
+
 
 				options_episode.append(joint_option)
 
@@ -200,9 +210,9 @@ class Trainer(object):
 					
 				
 
-			self.steps_from_episode[run,episode] = iteration
-			self.cum_rew_from_episode[run,episode] = np.mean(cum_rewards)
-			self.critic_from_episode = np.mean([np.max(np.max(self.all_agent_critic[i].weights,axis=0)) for i in range(params['env']['n_agents'])])
+			self.steps_from_episode[self.run,episode] = iteration
+			self.cum_rew_from_episode[self.run,episode] = np.mean(cum_rewards)
+			self.critic_from_episode[self.run,episode] = np.mean([np.max(np.max(self.all_agent_critic[i].weights,axis=0)) for i in range(params['env']['n_agents'])])
 
 			final_itr_reward = [item[-1] for item in all_agent_itr_rewards]
 			sum_of_rewards_per_episode.append(np.mean(final_itr_reward))
@@ -220,11 +230,12 @@ class Trainer(object):
 			# Calculate average duration of options used by each agent. Ideally we want them to be strictly less than 1. 
 			
 			#avg_dur = self.calcAverageDurationFromEpisode(options_episode, len(joint_option))
-			self.avg_dur_from_episode[run,episode] = np.array(switch_agent)/iteration
+			self.avg_dur_from_episode[self.run,episode] = np.array(switch_agent)/iteration
 			
 			# tensorboard plots
 			self.writer.add_scalar('cumulative_reward', np.mean(cum_rewards), episode)
 			# self.writer.add_scalar('episode_length', len(itr_reward), episode)
+			self.writer.add_scalar('episode_length', iteration, episode)
 			# self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
 			self.writer.add_scalar('Critic_Q_episode', critic_from_episode, episode)
 			#self.writer.add_scalar('Action_Critic_Q', action_critic_Q, episode)
