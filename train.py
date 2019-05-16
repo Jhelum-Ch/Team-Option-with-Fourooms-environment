@@ -155,6 +155,9 @@ class Trainer(object):
 											 done = done, 
 											 critic = self.critic, 
 											 reward = reward)
+				# Try selfish agents with no broadcast
+
+				broadcasts = np.zeros(self.env.n_agents)
 				
 				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
 
