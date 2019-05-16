@@ -136,6 +136,8 @@ wwwwwwwwwwwww
         # Render used to generate image frames
         self.grid_render = None
 
+        self.initial_states = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
+
         self.reset()
 
         # # visualize grid, where walls = -1 and all cells are numbered
@@ -172,7 +174,8 @@ wwwwwwwwwwwww
 
 
         # Sample initial joint state (s_0,...,s_n) without collision
-        initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
+        # initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
+        initial_state = self.initial_states
         for i in range(self.n_agents):
             self.agents[i].state = initial_state[i]     # Store state in agents
 
