@@ -25,7 +25,7 @@ class Trainer(object):
 		
 		
 	def train(self):
-		for _ in range(params['train']['n_runs']):
+		for run in range(params['train']['n_runs']):
 			# put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# 'seed'] in modelConfig remains unchanged
 			#joint_state = self.env.reset()
