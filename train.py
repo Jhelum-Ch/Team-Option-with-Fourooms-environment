@@ -16,6 +16,13 @@ class Trainer(object):
 		self.env = env
 		self.n_agents = params['env']['n_agents']
 		self.writer = SummaryWriter(log_dir=expt_folder)
+		self.cum_reward_from_episodes = []
+		self.n_samples = 100 # for sample average from belief
+		self.steps_from_episode = np.zeros((params['train']['n_runs'],params['train']['n_episodes']))
+		self.cum_rew_from_episode = np.zeros((params['train']['n_runs'],params['train']['n_episodes']))
+		self.critic_from_episode = np.zeros((params['train']['n_runs'],params['train']['n_episodes']))
+		self.avg_dur_from_episode = np.zeros((params['train']['n_runs'],params['train']['n_episodes'], params['env']['n_agents']))
+		
 		
 	def train(self):
 		for _ in range(params['train']['n_runs']):
@@ -23,7 +30,8 @@ class Trainer(object):
 			# 'seed'] in modelConfig remains unchanged
 			#joint_state = self.env.reset()
 			
-			
+			self.run = run
+
 			alpha = 0.001 * np.ones(len(self.env.states_list))
 			self.belief = MultinomialDirichletBelief(self.env, alpha)
 
@@ -73,6 +81,15 @@ class Trainer(object):
 			
 			# for _ in range(params['train']['n_episodes']):
 			self.trainEpisodes()
+
+		# plotReward(avg_rew_from_episode,'episode','cumulative reward',self.expt_folder,
+		# 					   'iteration_reward_'+ str(episode) +'.png')	
+
+		# Plots to report	
+		avg_len_epi = np.mean(self.steps_from_episode, axis=0)
+		avg_cum_rew = np.mean(self.cum_rew_from_episode, axis=0)
+		avg_crtic = np.mean(self.critic_from_episode, axis=0)
+		avg_dur = np.mean(self.avg_dur_from_episode, axis=0)
 			
 
 	def trainEpisodes(self):
@@ -83,6 +100,7 @@ class Trainer(object):
 		iterations = 0
 		switches = 0
 		avg_dur_from_episode = []
+		cum_rew_from_episode = []
 
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
@@ -122,13 +140,21 @@ class Trainer(object):
 			itr_reward = []
 			belief_error = []
 			options_episode = []
+			switch_agent = np.zeros(params['env']['n_agents'])
 
 			c = 0.0
 			
 			for iteration in range(params['env']['episode_length']):
 
-				print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :',
-					  self.env.discovered_goals)
+				if iteration > 50 and iteration % 20 == 0:
+					if params['policy']['temperature'] > 0.1:
+						params['policy']['temperature'] -= 0.1
+					else:
+						params['policy']['temperature'] = 0.01
+
+				if iteration % 50 == 0:
+					print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :', self.env.discovered_goals)
+
 
 				options_episode.append(joint_option)
 
@@ -140,7 +166,7 @@ class Trainer(object):
 				
 				# v
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
-				reward += reward + c
+				reward = reward + c
 				# cum_reward += reward
 				
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
@@ -155,9 +181,11 @@ class Trainer(object):
 											 done = done, 
 											 critic = self.critic, 
 											 reward = reward)
+
 				# Try selfish agents with no broadcast
 
 				broadcasts = np.zeros(self.env.n_agents)
+				
 				
 				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
 
@@ -170,7 +198,8 @@ class Trainer(object):
 				else:
 					joint_observation = self.env.get_observation(broadcasts)
 					self.belief.update(joint_observation, old_feasible_states)
-					sampled_joint_state = self.belief.sampleJointState()  # iii
+					#sampled_joint_state = self.belief.sampleJointState()  # iii
+					sampled_joint_state = self.sampleAverage(self.n_samples)
 
 				estimated_next_joint_state = self.estimate_next_joint_state(joint_observation,sampled_joint_state)
 				
@@ -210,6 +239,10 @@ class Trainer(object):
 					c = 0
 				
 
+				for i in range(params['env']['n_agents']):
+					if joint_option[i]!=next_joint_option[i]:
+						switch_agent[i] += 1
+
 				belief_error_step = calcErrorInBelief(self.env, joint_state, sampled_joint_state)
 				belief_error.append(belief_error_step)
 
@@ -248,12 +281,13 @@ class Trainer(object):
 					
 				critic_Q = calcCriticValue(self.critic.weights)
 				action_critic_Q = calcActionCriticValue(self.action_critic.weights)
+
 				
 				# tensorboard plots
 				iterations += 1
 				self.writer.add_scalar('reward_in_iteration', cum_reward, iterations)
 				self.writer.add_scalar('broadcast_in_iteration', np.sum(broadcasts), iterations)
-				self.writer.add_scalar('option switches', switches, iterations)
+				#self.writer.add_scalar('option switches', switches, iterations)
 				self.writer.add_scalar('Critic_Q_itr', critic_Q, iterations)
 				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iterations)
 				self.writer.add_scalar('Belief_Error_itr', belief_error_step, iterations)
@@ -263,7 +297,16 @@ class Trainer(object):
 				for idx, option in enumerate(self.options):
 					self.writer.add_scalar('option '+str(idx)+str(optionValues[idx]), iterations)
 					
-					
+			
+			# cum_rew_from_episode.append(itr_reward)	
+			# avg_rew_from_episode = list(np.mean(np.array(cum_rew_from_episode), axis = 0))
+
+
+			self.steps_from_episode[self.run,episode] = iteration
+			self.cum_rew_from_episode[self.run,episode] = cum_reward
+			self.critic_from_episode[self.run,episode] = calcCriticValue(self.critic.weights)
+			self.avg_dur_from_episode[self.run,episode] = np.array(switch_agent)/iteration
+
 			sum_of_rewards_per_episode.append(itr_reward[-1])
 			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
 					   'reward_per_episode.png')
@@ -282,11 +325,12 @@ class Trainer(object):
 			
 			# tensorboard plots
 			self.writer.add_scalar('cumulative_reward', cum_reward, episode)
-			self.writer.add_scalar('episode_length', len(itr_reward), episode)
+			self.writer.add_scalar('episode_length', iteration, episode)
 			self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
 			self.writer.add_scalar('Critic_Q_episode', critic_Q, episode)
 			self.writer.add_scalar('Action_Critic_Q', action_critic_Q, episode)
-			self.writer.add_scalar('average_duration', avg_dur, episode)
+			# self.writer.add_scalar('average_duration', avg_dur, episode)
+			self.writer.add_scalar('average_duration', np.mean(np.array(switch_agent)/iteration), episode) #mean (over agents) average duration
 			
 			# Save model
 			saveModelandMetrics(self)
@@ -338,6 +382,13 @@ class Trainer(object):
 		    avg_dur.append(count[k]/(len(listOfOptions)-1))
 		return avg_dur
 
+
+	def sampleAverage(self, n_samples):
+		res = np.zeros((n_samples,self.n_agents))
+		for n in range(n_samples):
+			sample = self.belief.sampleJointState()
+			res[n,:] = sample
+		return tuple(np.mean(res,axis=0))
 
 
 
