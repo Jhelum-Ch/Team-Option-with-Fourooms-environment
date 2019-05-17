@@ -387,8 +387,13 @@ class Trainer(object):
 		res = np.zeros((n_samples,self.n_agents))
 		for n in range(n_samples):
 			sample = self.belief.sampleJointState()
-			res[n,:] = sample
-		return tuple(np.mean(res,axis=0))
+			cells = [self.env.tocellcoord(sample[i]) for i in range(len(sample))]
+			print('cells',cells)
+			inter_res = tuple([np.mean(item) for item in cells])
+			a = np.floor(inter_res)
+			b = [int(item) for item in a]
+			res[n,:] = self.env.tocellnum(b)
+		return res
 
 
 
