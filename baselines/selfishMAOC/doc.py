@@ -40,14 +40,16 @@ class DOC:
 		
 	def initializeOption(self, joint_state):
 		# Choose joint-option o based on softmax option-policy
-		joint_state = tuple(np.sort(joint_state))
-		
-		joint_option = np.zeros(len(joint_state))
+		joint_state = tuple(np.sort(joint_state))		# TODO: Double-check if sorting makes sense here.
+		joint_option = np.zeros(len(joint_state), dtype=int)
+
 		for i, agent_state in enumerate(joint_state):
-			print('weights',self.mu_policies[0].weights.shape[0])
-			joint_option[i] = self.mu_policies[i].sample(agent_state)
+			# print('weights',self.mu_policies[0].weights.shape[0])
+			joint_option[i] = self.mu_policies[i].sample(agent_state)	# TODO: options sampled with replacement here, but availability is set in code below.
+																		# TODO: (continued) This seems inconsistent.
 			
-		
+		#print("Joint option: ", joint_option)
+
 		for option in self.options:
 			option.available = True
 			

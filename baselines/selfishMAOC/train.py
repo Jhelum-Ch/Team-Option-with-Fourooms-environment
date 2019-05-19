@@ -30,8 +30,9 @@ class Trainer(object):
 		for run in range(params['train']['n_runs']):
 			# put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# 'seed'] in modelConfig remains unchanged
-			self.run = run
 			
+			# features = Tabular(self.env.observation_space.n)
+			self.run = run
 			n_agent_states, n_actions = len(self.env.cell_list), params['agent']['n_actions']
 
 			# create option pool
@@ -59,7 +60,7 @@ class Trainer(object):
 			action_weights = [np.zeros((n_agent_states, params['agent']['n_options'], params['agent']['n_actions'])) for _ in range(params['env']['n_agents'])]
 	        #action_critic = IntraOptionActionQLearning(args.discount, args.lr_critic, option_terminations, action_weights, critic)
 
-			
+			#import pdb; pdb.set_trace()
 			# list of Q(s,o,a) for all agents
 			self.all_agent_action_critic = [IntraOptionActionQLearning(discount=params['env']['discount'],
 													   lr=params['train']['lr_action_critic'],
@@ -123,8 +124,8 @@ class Trainer(object):
 			# intra_option_policy_gradient = IntraOptionGradient(pi_policies)
 			
 			
-			cum_rewards = [0 for _ in range(params['env']['n_agents'])]
-			all_agent_itr_rewards = [[] for _ in range(params['env']['n_agents'])]
+			cum_rewards = [0. for _ in range(params['env']['n_agents'])]
+			#all_agent_itr_rewards = [0.0 for _ in range(params['env']['n_agents'])]
 
 			options_episode = []
 			switch_agent = np.zeros(params['env']['n_agents'])
@@ -140,7 +141,8 @@ class Trainer(object):
 						params['policy']['temperature'] = 0.01
 
 				if iteration % 50 == 0:
-					print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :', self.env.discovered_goals)
+					print('Iteration : ', iteration, 'Cumulative Reward : ', np.mean(cum_rewards), 'Discovered Goals :', self.env.discovered_goals)
+
 
 
 				options_episode.append(joint_option)
@@ -158,32 +160,30 @@ class Trainer(object):
 				# Get cumulative rewards for each agent
 				
 				cum_rewards = [rewards[i] + params['env']['discount'] * cum_rewards[i] for i in range(params['env']['n_agents'])]
-				
 			
 				# x - critic evaluation
-				all_agent_critic_feedback = self.doc.evaluateOption(critic=self.all_agent_critic,
-													 action_critic=self.all_agent_action_critic,
-
-													 joint_state=next_joint_state, 
-													 joint_option=joint_option,
-													 joint_action=joint_action,
-													 rewards=rewards,
-													 done=done,
+				all_agent_critic_feedback = self.doc.evaluateOption(self.all_agent_critic,
+													 self.all_agent_action_critic,
+													 next_joint_state,
+													 joint_option,
+													 joint_action,
+													 rewards,
+													 done,
 													 baseline=False)
+
 				
-				
-				self.doc.improveOption(policy_obj=self.intra_option_policy_gradients,
-								  termination_obj=self.termination_gradients,
-								  sampled_joint_state=joint_state,
-								  next_joint_state= next_joint_state,
-								  joint_option=joint_option,
-								  joint_action=joint_action,
-								  all_agent_critic=all_agent_critic_feedback
+				self.doc.improveOption(self.intra_option_policy_gradients,
+								  self.termination_gradients,
+								  joint_state,
+								  next_joint_state,
+								  joint_option,
+								  joint_action,
+								  all_agent_critic_feedback
 								   )
 				
 
 				next_joint_option, switch = self.doc.chooseOptionOnTermination(self.options, joint_option,
-																			   sampled_joint_state) 
+																			   joint_state) 
 				switches += switch
 				
 				if switch:
@@ -203,23 +203,25 @@ class Trainer(object):
 
 				
 				
-				all_agent_itr_rewards = [item.append(cum_rewards[i]) for (item,i) in zip(all_agent_itr_rewards,range(params['env']['n_agents']))]
 			
 				if done:
 					break
 					
-				
+			# for i in range(params['env']['n_agents']):
+			# 	all_agent_itr_rewards[i] = cum_rewards[i] 
+
+			# print('all_agent_itr_rewards', all_agent_itr_rewards)
 
 			self.steps_from_episode[self.run,episode] = iteration
 			self.cum_rew_from_episode[self.run,episode] = np.mean(cum_rewards)
 			self.critic_from_episode[self.run,episode] = np.mean([np.max(np.max(self.all_agent_critic[i].weights,axis=0)) for i in range(params['env']['n_agents'])])
 
-			final_itr_reward = [item[-1] for item in all_agent_itr_rewards]
-			sum_of_rewards_per_episode.append(np.mean(final_itr_reward))
+			# final_itr_reward = [item[-1] for item in all_agent_itr_rewards]
+			# sum_of_rewards_per_episode.append(np.mean(final_itr_reward))
 			plotReward(sum_of_rewards_per_episode, 'episodes', 'sum of rewards', self.expt_folder,
 					   'reward_per_episode.png')
 			
-			episode_length.append(np.mean([len(item) for item in  all_agent_itr_rewards]))
+			episode_length.append(iteration)
 	
 			plotReward(episode_length, 'episodes', 'length', self.expt_folder,
 				   'episode_length.png')
@@ -233,13 +235,12 @@ class Trainer(object):
 			self.avg_dur_from_episode[self.run,episode] = np.array(switch_agent)/iteration
 			
 			# tensorboard plots
-			self.writer.add_scalar('cumulative_reward', np.mean(cum_rewards), episode)
-			# self.writer.add_scalar('episode_length', len(itr_reward), episode)
+			#self.writer.add_scalar('cumulative_reward', np.mean(cum_rewards), episode)
 			self.writer.add_scalar('episode_length', iteration, episode)
 			# self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
-			self.writer.add_scalar('Critic_Q_episode', critic_from_episode, episode)
+			self.writer.add_scalar('Critic_Q_episode', np.mean(cum_rewards), episode)
 			#self.writer.add_scalar('Action_Critic_Q', action_critic_Q, episode)
-			self.writer.add_scalar('average_duration', avg_dur, episode)
+			self.writer.add_scalar('average_duration', np.mean(np.array(switch_agent)/iteration), episode)
 			
 			# Save model
 			saveModelandMetrics(self)

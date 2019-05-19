@@ -34,8 +34,7 @@ def calcCriticValue(nested_dict):
 	Q = []
 	for key in keys:
 		Q.append(max(nested_dict[key].values()))
-	return max(Q) #sup-norm
-	#return np.linalg.norm(Q) 
+	return np.linalg.norm(Q, ord=inf) #sup-norm
 
 
 def calcActionCriticValue(nested_dict):

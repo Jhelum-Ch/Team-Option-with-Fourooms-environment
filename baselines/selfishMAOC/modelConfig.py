@@ -20,7 +20,7 @@ params = {
 		'temperature'	: 1.0
 	},
 	'train': {
-		'n_runs'		: 	5,
+		'n_runs'		: 	1,
 		# 'n_epochs'		: 	50,
 		'n_episodes'	:	200,
 		'n_steps' 		: 	1000,
@@ -31,7 +31,7 @@ params = {
 		'lr_agent_q'		: 0.01,
 		'lr_theta'			: 0.01,
 		'lr_phi'			: 0.01,
-		'deliberation_cost' : 20
+		'deliberation_cost' : 0.1
 	}
 }
 
@@ -39,6 +39,7 @@ seed = np.random.RandomState(params['train']['seed'])
 
 paths = {
 	'output'	:	{
-		'base_folder'	:	'/home/ml/jchakr1/teamOptionResults_selfish/'
+		#'base_folder'	:	'/home/andreiwolf/RL/teamOption/selfishMAOC/teamOptionResults_selfish/'
+		'base_folder' : '/home/ml/jchakr1/selfishMAOC_AL_results'
 	}
 }

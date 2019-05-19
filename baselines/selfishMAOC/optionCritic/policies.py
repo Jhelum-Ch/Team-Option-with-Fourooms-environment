@@ -10,15 +10,18 @@ class SoftmaxPolicy:
 
     def value(self, phi, action=None):
         if action is None:
-            return np.sum(self.weights[phi, :], axis=0)
-        return np.sum(self.weights[phi, action], axis=0)
+            # return np.sum(self.weights[phi, :], axis=0)
+            #print('weight',self.weights.shape[1])
+            return self.weights[phi,:]
+        else:    
+            return np.sum(self.weights[phi, action], axis=0)        # TODO: Probably will have to remove sum here
 
     def pmf(self, phi):
         v = self.value(phi)/self.temp
         return np.exp(v - logsumexp(v))
 
     def sample(self, phi):
-        print('pmf',self.pmf(phi))
+        #print('pmf',self.pmf(phi))
         return int(self.rng.choice(self.weights.shape[1], p=self.pmf(phi)))
 
 

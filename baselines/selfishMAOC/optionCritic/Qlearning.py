@@ -18,15 +18,18 @@ class IntraOptionQLearning:
 
     def value(self, phi, option=None):
         if option is None:
-            return np.sum(self.weights[phi, :], axis=0)
-        return np.sum(self.weights[phi, option], axis=0)
+            #print('weight',self.weights.shape[1])
+            return self.weights[phi, :]
+        else:
+            return np.sum(self.weights[phi, option], axis=0)
 
     def advantage(self, phi, option=None):
         values = self.value(phi)
         advantages = values - np.max(values)
         if option is None:
             return advantages
-        return advantages[option]
+        else:    
+            return advantages[option]
 
     def update(self, phi, option, reward, done): #use agent_reward
         # One-step update target
@@ -34,6 +37,7 @@ class IntraOptionQLearning:
         if not done:
             current_values = self.value(phi)
             termination = self.terminations[self.last_option].pmf(phi)
+            #print('weights',self.weights.shape[1])
             update_target += self.discount*((1. - termination)*current_values[self.last_option] + termination*np.max(current_values))
 
         # Dense gradient update step

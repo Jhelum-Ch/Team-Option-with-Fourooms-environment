@@ -1,8 +1,8 @@
 from modelConfig import params
 
 class TerminationGradient:
-    def __init__(self, terminations, critic, lr=params['train']['lr_phi']):
-        self.terminations = terminations
+    def __init__(self, options, critic, lr=params['train']['lr_phi']):
+        self.terminations = [opt.termination for opt in options]
         self.critic = critic
         self.lr = lr
 
@@ -12,9 +12,9 @@ class TerminationGradient:
                 self.lr*magnitude*(self.critic.advantage(phi, option))
 
 class IntraOptionGradient:
-    def __init__(self, option_policies, lr=params['train']['lr_theta']):
+    def __init__(self, options, lr=params['train']['lr_theta']):
         self.lr = lr
-        self.option_policies = option_policies
+        self.option_policies = [opt.policy for opt in options]
 
     def update(self, phi, option, action, critic):
         actions_pmf = self.option_policies[option].pmf(phi)
