@@ -29,30 +29,32 @@
 from modelConfig import params
 
 class TerminationGradient:
-	def __init__(self, options, critic, lr=params['train']['lr_phi']):
-		self.termination = [option.termination for option in options]
+	def __init__(self, options, critic, termination, lr=params['train']['lr_phi']):
+		self.termination = termination
 		self.critic = critic
 		self.lr = lr
 
 	def update(self, next_joint_state, estimated_next_joint_state, joint_option):
 		# joint_state refers to sampled next state (estimated_next_state), s_k^'
-		advantage = self.critic.getAdvantage(estimated_next_joint_state, joint_option)	 + params['train'][
-			'deliberation_cost']
-		for state, option in zip(next_joint_state, joint_option):
+		advantage = self.critic.getAdvantage(estimated_next_joint_state, joint_option)	 + params['train']['deliberation_cost']
+		for agent_idx, (state, option) in enumerate(zip(next_joint_state, joint_option)):
 			# phi = joint_state[agentID]
-			magnitudes, directions = self.termination[option].grad(state)
-			self.termination[option].weights[directions] -= \
+			magnitudes, directions = self.termination[agent_idx][option].grad(state)
+			self.termination[agent_idx][option].weights[directions] -= \
 					self.lr*magnitudes*advantage
 # Check this
 class IntraOptionGradient:
 	def __init__(self, options, lr=params['train']['lr_theta']):
 		self.lr = lr
-		self.pi_policy = [option.policy for option in options] #as a list of options in use
+		self.pi_policy = []
+		for agent_idx in range(params['env']['n_agents']):
+			self.pi_policy.append([option.policy for option in options[agent_idx]]) #as a list of options in use
 
 	def update(self, agents, joint_state, joint_option, joint_action, action_critic_value):
 		# joint state refers to sampled joint state, s_k
-		for idx, state, option, action in zip(range(len(joint_state)), joint_state, joint_option, joint_action):
-			agent_state = agents[idx].state
-			log_pi = self.pi_policy[option].pmf(agent_state)
-			self.pi_policy[option].weights[state, :] -= self.lr*action_critic_value*log_pi
-			self.pi_policy[option].weights[state, action] += self.lr*action_critic_value
+		# for idx, state, option, action in zip(range(len(joint_state)), joint_state, joint_option, joint_action):
+		for idx, (state, option, action) in enumerate(zip(joint_state, joint_option, joint_action)):
+			# agent_state = agents[idx].state
+			log_pi = self.pi_policy[idx][option].pmf(state)
+			self.pi_policy[idx][option].weights[state, :] -= self.lr*action_critic_value*log_pi
+			self.pi_policy[idx][option].weights[state, action] += self.lr*action_critic_value

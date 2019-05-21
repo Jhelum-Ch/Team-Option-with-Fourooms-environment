@@ -54,20 +54,23 @@ def createOptions(env):
 		mu_policy = Softmax option policy object
 	'''
 	joint_state_list = set([tuple(np.sort(s)) for s in env.states_list])
-	all_joint_options =  list(itertools.permutations(range(params['agent']['n_options']), params['env']['n_agents']))
+	all_joint_options = list(itertools.permutations(range(params['agent']['n_options']), params['env']['n_agents']))
 	joint_option_list = set([tuple(np.sort(jo)) for jo in all_joint_options])
 	
 	# mu_policy is the policy over options
 	mu_weights = dict.fromkeys(joint_state_list, dict.fromkeys(joint_option_list, 0))
 	mu_policy = SoftmaxOptionPolicy(mu_weights)
 	
-	options = []
-	for i in range(params['agent']['n_options']):
-		# options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.agent_actions)), SigmoidTermination(
-		# 	len(env.cell_list))))
-		options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.actions)), SigmoidTermination(
-			len(env.cell_list))))
+	options_all_agents = []
+	for agent in range(params['env']['n_agents']):
+		options = []
+		for i in range(params['agent']['n_options']):
+			# options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.agent_actions)), SigmoidTermination(
+			# 	len(env.cell_list))))
+			options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.actions)), SigmoidTermination(
+				len(env.cell_list))))
+		options_all_agents.append(options)
+
+		print(options_all_agents)
 		
-	return options, mu_policy
-		
-		
+	return options_all_agents, mu_policy

@@ -43,12 +43,12 @@ class DOC:
 		
 		joint_option = self.mu_policy.sample(joint_state)
 		
-		for option in self.options:
-			option.available = True
-			
-		for option in joint_option:
-			self.options[option].available = False
-		
+		# for option in self.options:
+		# 	option.available = True
+		#
+		# for idx, option in enumerate(joint_option):
+		# 	self.options[idx][option].available = False
+
 		idx = 0
 		for agent in self.env.agents:
 			agent.option = joint_option[idx]
@@ -59,14 +59,14 @@ class DOC:
 	def chooseOptionOnTermination(self, options, joint_option, joint_state):
 		terminations = [1, 1, 1]
 		
-		for option in joint_option:
-			options[option].available = True
+		# for option in joint_option:
+		# 		# 	options[option].available = True
 		
 		sampled_joint_option = self.mu_policy.sample(joint_state=tuple(np.sort(joint_state)))
 		
-		# make the options unavailable
-		for option in sampled_joint_option:
-			options[option].available = False
+		# # make the options unavailable
+		# for option in sampled_joint_option:
+		# 	options[option].available = False
 		# return the joint options
 		return sampled_joint_option, np.sum(terminations)
 	
@@ -132,8 +132,8 @@ class DOC:
 			
 	def chooseAction(self):
 		joint_action = []
-		for agent in self.env.agents:
-			action = self.options[agent.option].policy.sample(agent.state)
+		for idx, agent in enumerate(self.env.agents):
+			action = self.options[idx][agent.option].policy.sample(agent.state)
 			agent.action = action
 			# print('agent ID:', agent.ID, 'state:', agent.state, 'option ID:', agent.option, 'action:', action)
 			joint_action.append(action)

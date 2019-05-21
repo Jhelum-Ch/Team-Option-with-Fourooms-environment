@@ -82,8 +82,10 @@ class Trainer(object):
 			# pi_policy for option 0 can be called as	:	options[0].policy.weights
 			# options[0].policy is the object of SoftmaxActionPolicy()
 			# termination for option 0 can be called as	:	options[0].termination.weights
-			
-			terminations = [option.termination for option in self.options]
+
+			terminations = []
+			for agent_idx in range(params['env']['n_agents']):
+				terminations.append([option.termination for option in self.options[agent_idx]])
 			
 			self.doc = DOC(self.env, self.options, self.mu_policy)
 			
@@ -101,7 +103,7 @@ class Trainer(object):
 									 lr=params['train']['lr_agent_q'],
 									 options=self.options)
 			
-			self.termination_gradient = TerminationGradient(self.options, self.critic)
+			self.termination_gradient = TerminationGradient(self.options, self.critic, terminations)
 			self.intra_option_policy_gradient = IntraOptionGradient(self.options)
 
 			self.trainEpisodes()
@@ -114,13 +116,14 @@ class Trainer(object):
 		# episode_action_critic_Q = []
 
 		params['policy']['temperature'] = 1
+		cum_reward = 0
 
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
 			
 			# params['policy']['temperature'] = 1
 			if params['policy']['temperature'] > 0.1:
-				params['policy']['temperature'] -= 0.1
+				params['policy']['temperature'] -= 0.025
 			else:
 				params['policy']['temperature'] = 0.01
 			
@@ -149,18 +152,18 @@ class Trainer(object):
 			self.agent_q.start(joint_state, joint_option, joint_action)
 			
 			# done = False
-			cum_reward = 0
+			# cum_reward = 0
 			itr_critic_Q = []
 			itr_action_critic_Q = []
 			c = 0.0
 			
 			for iteration in range(params['env']['episode_length']):
 				
-				if iteration > 50 and iteration % 20 == 0:
-					if params['policy']['temperature'] > 0.1:
-						params['policy']['temperature'] -= 0.1
-					else:
-						params['policy']['temperature'] = 0.01
+				# if iteration > 50 and iteration % 100 == 0:
+				# 	if params['policy']['temperature'] > 0.1:
+				# 		params['policy']['temperature'] -= 0.05
+				# 	else:
+				# 		params['policy']['temperature'] = 0.05
 
 				if iteration % 50 == 0:
 					print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :', self.env.discovered_goals)
@@ -169,6 +172,10 @@ class Trainer(object):
 				joint_action = self.doc.chooseAction()
 
 				reward, next_joint_state, done, _ = self.env.step(joint_action)
+
+				if reward > 0 and params['policy']['temperature'] > 0.05:
+					params['policy']['temperature'] -= 0.025
+
 				reward += c
 				
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
@@ -186,7 +193,10 @@ class Trainer(object):
 				
 				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
 
+
 				cum_reward = reward + params['env']['discount'] * cum_reward
+				# if reward > 0.:
+				# 	print('reward',reward,'cum_reward',cum_reward)
 
 				if iteration == 0:
 					joint_observation = prev_joint_obs
@@ -250,9 +260,10 @@ class Trainer(object):
 				self.writer.add_scalar('Action_Critic_Q-itr', action_critic_Q, iterations)
 				
 				# optionValues = calcAgentActionValue(self.options)
-				
-				for idx, option in enumerate(self.options):
-					self.writer.add_scalar( 'option '+str(idx), calcOptionValue(option.policy.weights), iterations)
+
+				for agent in range(params['env']['n_agents']):
+					for idx, option in enumerate(self.options[agent]):
+						self.writer.add_scalar('agent'+str(agent)+'_option'+str(idx), calcOptionValue(option.policy.weights), iterations)
 			
 				# itr_critic_Q.append(critic_Q)
 				# itr_action_critic_Q.append(action_critic_Q)
