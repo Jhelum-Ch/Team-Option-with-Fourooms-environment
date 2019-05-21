@@ -95,7 +95,7 @@ class Trainer(object):
 										  weights=self.mu_policy.weights)
 			
 			self.action_critic = IntraOptionActionQLearning(discount=params['env']['discount'],
-													   lr=params['train']['lr_action_critic'],
+													   lr=params['train']['lr_critic'],
 													   terminations=terminations,
 													   qbigomega=self.critic)
 			
