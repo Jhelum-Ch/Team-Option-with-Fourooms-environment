@@ -48,12 +48,16 @@ class Trainer(object):
 			# options[0].policy is the object of SoftmaxActionPolicy()
 			# termination for option 0 can be called as	:	options[0].termination.weights
 
-			option_policies = [option.policy for option in self.options]
+			#ption_policies = [option.policy for option in self.options]
 			#option_policies.extend([FixedActionPolicies(i, params['agent']['n_actions'])] for i in range(params['agent']['n_actions']))
 			
 			# terminations = [option.termination for option in self.options]
 			# terminations.extend([OneStepTermination() for _ in range(params['agent']['n_actions'])])
-			terminations = [OneStepTermination() for _ in range(params['agent']['n_options'])]
+			terminations = []
+			for agent_idx in range(params['env']['n_agents']):
+				terminations.append([option.termination for option in self.options[agent_idx]])
+			#terminations = [OneStepTermination() for _ in range(params['agent']['n_options'])]
+			
 			
 			
 			self.doc = DOC(self.env, self.options, self.mu_policy)

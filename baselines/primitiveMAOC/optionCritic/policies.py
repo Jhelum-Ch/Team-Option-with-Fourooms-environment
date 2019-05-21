@@ -17,12 +17,39 @@ class SoftmaxOptionPolicy:
 	def pmf(self, joint_state):
 		v = np.array(list(self.weights[joint_state].values())) / self.temp
 		pmf = np.exp(v - logsumexp(v))
+		pmf = params['policy']['epsilon']*self.rng.uniform() + (1-params['policy']['epsilon'])*pmf
+		pmf /= np.sum(pmf)
 		return pmf
 	
 	def sample(self, joint_state):
 		idx = int(self.rng.choice(len(self.weights[joint_state].keys()), p=self.pmf(joint_state)))
 		joint_option = list(self.weights[joint_state].keys())[idx]
 		return joint_option
+
+
+class EgreedyOptionPolicy:
+    def __init__(self, weights, epsilon=params['policy']['epsilon']):
+        self.rng = seed
+        
+        self.weights = weights #np.zeros((nfeatures, nactions))
+
+        self.epsilon = epsilon
+
+    # def value(self, phi, action=None):
+    #     if action is None:
+    #         return self.weights[phi, :]
+    #     return np.sum(self.weights[phi, action], axis=0)
+
+    def sample(self, joint_state):
+        if self.rng.uniform() < self.epsilon:
+        	idx = int(self.rng.choice(len(self.weights[joint_state].keys())))
+        	joint_option = list(self.weights[joint_state].keys())[idx]
+        	return joint_option
+        else:
+        	v = np.array(list(self.weights[joint_state].values()))
+        	idx = int(np.argmax(v))
+        	joint_option = list(self.weights[joint_state].keys())[idx]
+        return joint_option
 
 class FixedActionPolicies:
     def __init__(self, action, n_actions):
@@ -120,6 +147,8 @@ class SoftmaxActionPolicy:
 	def pmf(self, phi):
 		v = self.value(phi) / self.temp
 		pmf = np.exp(v - logsumexp(v))
+		pmf = params['policy']['epsilon']*self.rng.uniform() + (1-params['policy']['epsilon'])*pmf
+		pmf /= np.sum(pmf)
 		return pmf
 	
 	def sample(self, phi):

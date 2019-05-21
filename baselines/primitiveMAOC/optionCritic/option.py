@@ -32,7 +32,7 @@
 # 		
 
 from modelConfig import params
-from optionCritic.policies import SoftmaxOptionPolicy, SoftmaxActionPolicy, FixedActionPolicies
+from optionCritic.policies import SoftmaxOptionPolicy, EgreedyOptionPolicy, SoftmaxActionPolicy, FixedActionPolicies
 from optionCritic.termination import SigmoidTermination, OneStepTermination
 import itertools
 import numpy as np
@@ -59,21 +59,21 @@ def createOptions(env):
 	
 	# mu_policy is the policy over options
 	mu_weights = dict.fromkeys(joint_state_list, dict.fromkeys(joint_option_list, 0))
-	mu_policy = SoftmaxOptionPolicy(mu_weights)
+	mu_policy = EgreedyOptionPolicy(mu_weights)
 	
-	options = []
-	for i in range(params['agent']['n_options']):
-	#for i in range(params['agent']['n_actions']):
-	# options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.agent_actions)), SigmoidTermination(
-	# 	len(env.cell_list))))
-	# options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.actions)), SigmoidTermination(
-	# 	len(env.cell_list))))
+	options_all_agents = []
+	for agent in range(params['env']['n_agents']):
+		options = []
+		for i in range(params['agent']['n_options']):
+			# options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.agent_actions)), SigmoidTermination(
+			# 	len(env.cell_list))))
+			# options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.actions)), SigmoidTermination(
+			# 	len(env.cell_list))))
+			options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.actions)), OneStepTermination()))
+		options_all_agents.append(options)
 
-		options.append(Option(i, SoftmaxActionPolicy(len(env.cell_list), len(env.actions)), SigmoidTermination(
-	 	len(env.cell_list))))
-
-	#options.policy.extend([FixedActionPolicies(act, len(env.actions)) for act in range(nactions)])
+		#print(options_all_agents)
 		
-	return options, mu_policy
+	return options_all_agents, mu_policy
 		
 		

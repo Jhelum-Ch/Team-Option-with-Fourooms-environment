@@ -59,14 +59,14 @@ class DOC:
 	def chooseOptionOnTermination(self, options, joint_option, joint_state):
 		terminations = [1, 1, 1]
 		
-		for option in joint_option:
-			options[option].available = True
+		# for option in joint_option:
+		# 	options[option].available = True
 		
 		sampled_joint_option = self.mu_policy.sample(joint_state=tuple(np.sort(joint_state)))
 		
 		# make the options unavailable
-		for option in sampled_joint_option:
-			options[option].available = False
+		# for option in sampled_joint_option:
+		# 	options[option].available = False
 		# return the joint options
 
 		return sampled_joint_option, np.sum(terminations)
