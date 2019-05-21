@@ -28,28 +28,28 @@ class SoftmaxOptionPolicy:
 
 
 class EgreedyOptionPolicy:
-    def __init__(self, weights, epsilon=params['policy']['epsilon']):
-        self.rng = seed
-        
-        self.weights = weights #np.zeros((nfeatures, nactions))
+	def __init__(self, weights, epsilon=params['policy']['epsilon']):
+		self.rng = seed
 
-        self.epsilon = epsilon
+		self.weights = weights #np.zeros((nfeatures, nactions))
 
-    # def value(self, phi, action=None):
-    #     if action is None:
-    #         return self.weights[phi, :]
-    #     return np.sum(self.weights[phi, action], axis=0)
+		self.epsilon = epsilon
 
-    def sample(self, joint_state):
-        if self.rng.uniform() < self.epsilon:
-        	idx = int(self.rng.choice(len(self.weights[joint_state].keys())))
-        	joint_option = list(self.weights[joint_state].keys())[idx]
-        	return joint_option
-        else:
-        	v = np.array(list(self.weights[joint_state].values()))
-        	idx = int(np.argmax(v))
-        	joint_option = list(self.weights[joint_state].keys())[idx]
-        return joint_option
+	# def value(self, phi, action=None):
+	#     if action is None:
+	#         return self.weights[phi, :]
+	#     return np.sum(self.weights[phi, action], axis=0)
+
+	def sample(self, joint_state):
+		if self.rng.uniform() < self.epsilon:
+			idx = int(self.rng.choice(len(self.weights[joint_state].keys())))
+			joint_option = list(self.weights[joint_state].keys())[idx]
+			return joint_option
+		else:
+			v = np.array(list(self.weights[joint_state].values()))
+			idx = int(np.argmax(v))
+			joint_option = list(self.weights[joint_state].keys())[idx]
+		return joint_option
 
 
 
@@ -110,10 +110,6 @@ class EgreedyOptionPolicy:
 class SoftmaxActionPolicy:
 	def __init__(self, n_states, n_choices, temp=params['policy']['temperature']):
 		'''
-<<<<<<< HEAD
-=======
-
->>>>>>> 987cde61614aea6df206a5a4447651ffc0113243
 		:param n_states: number of encoded individual states
 		:param n_choices: choices over which pmf spreads choice can be either number of primitive actions or options
 		:param temp: lower temperature means uniform distribution, higher means delta
