@@ -36,7 +36,7 @@ class Trainer(object):
 			n_agent_states, n_actions = len(self.env.cell_list), params['agent']['n_actions']
 
 			# create option pool
-			self.option_policies = [SoftmaxPolicy(self.rng, n_agent_states, n_actions, temp=params['policy']['temperature']) for _ in range(params['agent']['n_options']) ]
+			#self.option_policies = [SoftmaxPolicy(self.rng, n_agent_states, n_actions, temp=params['policy']['temperature']) for _ in range(params['agent']['n_options']) ]
 
 			self.options, self.mu_policies = createOptions(self.rng, self.env)
 			# options is a list of option object. Each option object has its own termination policy and pi_policy.
@@ -44,7 +44,10 @@ class Trainer(object):
 			# options[0].policy is the object of SoftmaxActionPolicy()
 			# termination for option 0 can be called as	:	options[0].termination.weights
 			
-			terminations = [option.termination for option in self.options]
+			#terminations = [option.termination for option in self.options]
+			terminations = []
+			for agent_idx in range(params['env']['n_agents']):
+				terminations.append([option.termination for option in self.options[agent_idx]])
 			
 			self.doc = DOC(self.env, self.options, self.mu_policies)
 			
@@ -69,8 +72,8 @@ class Trainer(object):
 													   qbigomega=self.all_agent_critic[i]) for i in range(params['env']['n_agents'])]
 			
 			
-			self.termination_gradients = [TerminationGradient(self.options, self.all_agent_critic[i]) for i in range(params['env']['n_agents'])]
-			self.intra_option_policy_gradients = [IntraOptionGradient(self.options) for _ in range(params['env']['n_agents'])]
+			self.termination_gradients = [TerminationGradient(self.options[i], self.all_agent_critic[i]) for i in range(params['env']['n_agents'])]
+			self.intra_option_policy_gradients = [IntraOptionGradient(self.options[i]) for i in range(params['env']['n_agents'])]
 			
 			
 
@@ -100,6 +103,12 @@ class Trainer(object):
 			
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# # 'f'] in modelConfig remains unchanged
+
+			params['policy']['temperature'] = 1
+			if params['policy']['temperature'] > 0.1:
+				params['policy']['temperature'] -= 0.025
+			else:
+				params['policy']['temperature'] = 0.01
 			joint_state = self.env.reset()
 			
 			

@@ -13,17 +13,35 @@ class SoftmaxPolicy:
             # return np.sum(self.weights[phi, :], axis=0)
             #print('weight',self.weights.shape[1])
             return self.weights[phi,:]
-        else:    
-            return np.sum(self.weights[phi, action], axis=0)        # TODO: Probably will have to remove sum here
+           
+        return np.sum(self.weights[phi, action], axis=0)        # TODO: Probably will have to remove sum here
 
     def pmf(self, phi):
         v = self.value(phi)/self.temp
-        return np.exp(v - logsumexp(v))
+        pmf = np.exp(v - logsumexp(v))
+        pmf = params['policy']['epsilon']*self.rng.uniform() + (1-params['policy']['epsilon'])*pmf
+        pmf /= np.sum(pmf)
+        return pmf
 
     def sample(self, phi):
         #print('pmf',self.pmf(phi))
         return int(self.rng.choice(self.weights.shape[1], p=self.pmf(phi)))
 
+class EgreedyPolicy:
+    def __init__(self, rng, nfeatures, nactions, epsilon):
+        self.rng = rng
+        self.epsilon = epsilon
+        self.weights = np.zeros((nfeatures, nactions))
+
+    def value(self, phi, action=None):
+        if action is None:
+            return self.weights[phi, :]
+        return np.sum(self.weights[phi, action], axis=0)
+
+    def sample(self, phi):
+        if self.rng.uniform() < self.epsilon:
+            return int(self.rng.randint(self.weights.shape[1]))
+        return int(np.argmax(self.value(phi)))
 
 # class SoftmaxOptionPolicy:
 # 	def __init__(self, weights, temp=params['policy']['temperature']):

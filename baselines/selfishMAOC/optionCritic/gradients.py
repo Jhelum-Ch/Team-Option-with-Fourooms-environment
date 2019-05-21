@@ -1,8 +1,8 @@
 from modelConfig import params
 
 class TerminationGradient:
-    def __init__(self, options, critic, lr=params['train']['lr_phi']):
-        self.terminations = [opt.termination for opt in options]
+    def __init__(self, agent_options, critic, lr=params['train']['lr_phi']):
+        self.terminations = [opt.termination for opt in agent_options]
         self.critic = critic
         self.lr = lr
 
@@ -11,15 +11,17 @@ class TerminationGradient:
         self.terminations[option].weights[direction] -= \
                 self.lr*magnitude*(self.critic.advantage(phi, option))
 
+
 class IntraOptionGradient:
-    def __init__(self, options, lr=params['train']['lr_theta']):
+    def __init__(self, agent_options, lr=params['train']['lr_theta']):
         self.lr = lr
-        self.option_policies = [opt.policy for opt in options]
+        self.agent_pi_policies = [option.policy for option in agent_options]
+
 
     def update(self, phi, option, action, critic):
-        actions_pmf = self.option_policies[option].pmf(phi)
-        self.option_policies[option].weights[phi, :] -= self.lr*critic*actions_pmf
-        self.option_policies[option].weights[phi, action] += self.lr*critic
+        agent_action_pmf = self.agent_pi_policies[option].pmf(phi)
+        self.agent_pi_policies[option].weights[phi, :] -= self.lr*critic*agent_action_pmf
+        self.agent_pi_policies[option].weights[phi, action] += self.lr*(critic - (self.agent_pi_policies[option].weights[phi, action] - 1./params['agent']['n_actions']))
 
 
 class FixedActionPolicies:

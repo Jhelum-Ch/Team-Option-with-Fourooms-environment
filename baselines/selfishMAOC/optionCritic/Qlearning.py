@@ -20,16 +20,17 @@ class IntraOptionQLearning:
         if option is None:
             #print('weight',self.weights.shape[1])
             return self.weights[phi, :]
-        else:
-            return np.sum(self.weights[phi, option], axis=0)
+        
+        # return np.sum(self.weights[phi, option], axis=0)
+        return self.weights[phi, option]
 
     def advantage(self, phi, option=None):
         values = self.value(phi)
         advantages = values - np.max(values)
         if option is None:
             return advantages
-        else:    
-            return advantages[option]
+          
+        return advantages[option]
 
     def update(self, phi, option, reward, done): #use agent_reward
         # One-step update target
@@ -60,7 +61,8 @@ class IntraOptionActionQLearning:
         self.qbigomega = qbigomega
 
     def value(self, phi, option, action):
-        return np.sum(self.weights[phi, option, action], axis=0)
+        # return np.sum(self.weights[phi, option, action], axis=0)
+        return self.weights[phi, option, action]
 
     def start(self, phi, option, action):
         self.last_phi = phi

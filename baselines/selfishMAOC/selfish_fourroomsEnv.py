@@ -12,6 +12,7 @@ from modelConfig import params
 from optionCritic.Qlearning import IntraOptionQLearning
 import copy
 import sys
+from modelConfig import params
 #from rendering import *
 
 if sys.version_info[0] < 3:
@@ -34,7 +35,7 @@ class Selfish_FourroomsMA(gym.Env):
         right = 3
         # stay = 4
 
-    def __init__(self, n_agents = 3, goal_reward = 1., broadcast_penalty = -0.01, collision_penalty = -0.01, discount = 0.9):
+    def __init__(self, n_agents = params['env']['n_agents'], goal_reward = params['env']['goal_reward'], broadcast_penalty = params['env']['broadcast_penalty'], collision_penalty = params['env']['collision_penalty'], discount = params['env']['discount']):
         layout = """\
 wwwwwwwwwwwww
 w     w     w
@@ -121,7 +122,8 @@ wwwwwwwwwwwww
 
         self.goals.sort()                   # important if not already sorted in line above
         self.discovered_goals = []
-        self.init_states = self.cell_list.copy()   # initial agent states
+        # self.init_states = self.cell_list.copy()   # initial agent states
+        self.init_states = copy.deepcopy(self.cell_list)   # initial agent s
         for g in self.goals:
             self.init_states.remove(g)
 
