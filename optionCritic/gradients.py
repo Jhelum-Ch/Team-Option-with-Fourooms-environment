@@ -57,4 +57,6 @@ class IntraOptionGradient:
 			# agent_state = agents[idx].state
 			log_pi = self.pi_policy[idx][option].pmf(state)
 			self.pi_policy[idx][option].weights[state, :] -= self.lr*action_critic_value*log_pi
-			self.pi_policy[idx][option].weights[state, action] += self.lr*action_critic_value
+			# self.pi_policy[idx][option].weights[state, action] += self.lr*action_critic_value
+			self.pi_policy[idx][option].weights[state, action] += \
+				self.lr * (action_critic_value - (self.pi_policy[idx][option].weights[state, action] - 1. / params['agent']['n_actions']))
