@@ -2,14 +2,14 @@ import numpy as np
 
 params = {
 	'env'	:	{
-		'n_agents'			:	2,
-		'goal_reward' 		:	 1,
-		'broadcast_penalty'	:  -0.02,
-		'collision_penalty' :  -0.01,
-		'episode_length'	: 	1000,
-		'no_broadcast_threshold'	: 0.01,	#TODO : tune
-		'selfishness_penalty'	: -0.01,	#TODO : tune
-		'discount'				: 0.99
+		'n_agents'			:	2, #2,
+		'goal_reward' 		:	 10, #1,
+		'broadcast_penalty'	:  0.0, #-0.02,
+		'collision_penalty' :  0.0, #-0.01,
+		'episode_length'	: 	1500,
+		'no_broadcast_threshold'	: 0.0, #0.01,	#TODO : tune
+		'selfishness_penalty'	: 0.0, #-0.01,	#TODO : tune
+		'discount'				: 1.0, #0.99
 		#'initial_joint_state'	:	(11, 31, 21)
 	},
 	'agent'	:	{
@@ -17,7 +17,8 @@ params = {
 		'n_actions'	:	4
 	},
 	'policy'	:	{
-		'temperature'	: 1
+		'temperature'	: 1.0,
+		'epsilon' : 0.05
 	},
 	'train': {
 		'n_runs'		: 	1,
@@ -39,6 +40,8 @@ seed = np.random.RandomState(params['train']['seed'])
 
 paths = {
 	'output'	:	{
-		'base_folder'	:	'/private/home/sumanab/multiagent/experiments/' #'/home/ml/sbasu11/Documents/MultiAgent/experiments/'
+
+		#'base_folder'	:	'/private/home/sumanab/multiagent/experiments/' #'/home/ml/sbasu11/Documents/MultiAgent/experiments/'
+		'base_folder'	:	'/home/ml/jchakr1/teamOptionResults/'
 	}
 }

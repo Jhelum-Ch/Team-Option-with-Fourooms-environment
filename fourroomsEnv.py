@@ -120,7 +120,7 @@ wwwwwwwwwwwww
         self.states_list = [s for s in list(itertools.product(self.cell_list, repeat=self.n_agents))
                             if len(s) == len(np.unique(s))]
 
-        self.goals = [50, 71, 103] #[50, 62, 71, 98, 103]  # fixed goals
+        self.goals = [50, 62, 71, 98, 103]  # [50, 71, 103] #fixed goals
 
         self.goals.sort()                   # important if not already sorted in line above
         self.discovered_goals = []
@@ -177,8 +177,8 @@ wwwwwwwwwwwww
 
 
         # Sample initial joint state (s_0,...,s_n) without collision
-        # initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
-        initial_state = self.initial_states
+        initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
+        # initial_state = self.initial_states
         for i in range(self.n_agents):
             self.agents[i].state = initial_state[i]     # Store state in agents
 
