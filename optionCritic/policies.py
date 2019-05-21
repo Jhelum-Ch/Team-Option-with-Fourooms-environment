@@ -17,12 +17,41 @@ class SoftmaxOptionPolicy:
 	def pmf(self, joint_state):
 		v = np.array(list(self.weights[joint_state].values())) / self.temp
 		pmf = np.exp(v - logsumexp(v))
+		pmf = params['policy']['epsilon']*self.rng.uniform() + (1-params['policy']['epsilon'])*pmf
+		pmf /= np.sum(pmf)
 		return pmf
 	
 	def sample(self, joint_state):
 		idx = int(self.rng.choice(len(self.weights[joint_state].keys()), p=self.pmf(joint_state)))
 		joint_option = list(self.weights[joint_state].keys())[idx]
 		return joint_option
+
+
+class EgreedyOptionPolicy:
+    def __init__(self, weights, epsilon=params['policy']['epsilon']):
+        self.rng = seed
+        
+        self.weights = weights #np.zeros((nfeatures, nactions))
+
+        self.epsilon = epsilon
+
+    # def value(self, phi, action=None):
+    #     if action is None:
+    #         return self.weights[phi, :]
+    #     return np.sum(self.weights[phi, action], axis=0)
+
+    def sample(self, joint_state):
+        if self.rng.uniform() < self.epsilon:
+        	idx = int(self.rng.choice(len(self.weights[joint_state].keys())))
+        	joint_option = list(self.weights[joint_state].keys())[idx]
+        	return joint_option
+        else:
+        	v = np.array(list(self.weights[joint_state].values()))
+        	idx = int(np.argmax(v))
+        	joint_option = list(self.weights[joint_state].keys())[idx]
+        return joint_option
+
+
 
 # class SoftmaxOptionPolicy:
 # 	def __init__(self, weights, temp=params['policy']['temperature']):
@@ -82,22 +111,15 @@ class SoftmaxActionPolicy:
 	def __init__(self, n_states, n_choices, temp=params['policy']['temperature']):
 		'''
 <<<<<<< HEAD
-<<<<<<< HEAD
 =======
 
 >>>>>>> 987cde61614aea6df206a5a4447651ffc0113243
-=======
-
->>>>>>> 48826ef82b860ce6142d604849e7dc2331368dee
 		:param n_states: number of encoded individual states
 		:param n_choices: choices over which pmf spreads choice can be either number of primitive actions or options
 		:param temp: lower temperature means uniform distribution, higher means delta
 		'''
 		self.rng = seed
-<<<<<<< HEAD
 
-=======
->>>>>>> 48826ef82b860ce6142d604849e7dc2331368dee
 		self.weights = np.zeros((n_states, n_choices))  # we assume that n_features and
 		# n_actions for all agents are same
 		self.temp = temp
@@ -109,15 +131,35 @@ class SoftmaxActionPolicy:
 		:return:
 		'''
 		if action is None:
-			value = np.sum(self.weights[phi, :], axis=0)
+			value = self.weights[phi, :]
 		value = np.sum(self.weights[phi, action], axis=0)
 		return value
 	
 	def pmf(self, phi):
 		v = self.value(phi) / self.temp
 		pmf = np.exp(v - logsumexp(v))
+		pmf = params['policy']['epsilon']*self.rng.uniform() + (1-params['policy']['epsilon'])*pmf
+		pmf /= np.sum(pmf)
 		return pmf
 	
 	def sample(self, phi):
 		sample_action = int(self.rng.choice(self.weights.shape[1], p=self.pmf(phi)))
 		return sample_action
+
+
+
+# class EgreedyOptionPolicy:
+#     def __init__(self, rng, nfeatures, nactions, epsilon=params['policy']['temperature']):
+#         self.rng = seed
+#         self.epsilon = epsilon
+#         self.weights = np.zeros((nfeatures, nactions))
+
+#     def value(self, phi, action=None):
+#         if action is None:
+#             return self.weights[phi, :]
+#         return np.sum(self.weights[phi, action], axis=0)
+
+#     def sample(self, phi):
+#         if self.rng.uniform() < self.epsilon:
+#             return int(self.rng.randint(self.weights.shape[1]))
+#         return int(np.argmax(self.value(phi)))

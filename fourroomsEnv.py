@@ -13,6 +13,7 @@ from optionCritic.Qlearning import IntraOptionQLearning
 import copy
 import sys
 #from rendering import *
+from modelConfig import params
 
 if sys.version_info[0] < 3:
     print("Warning! Python 2 can lead to unpredictable behaviours. Please use Python 3 instead.")
@@ -34,7 +35,9 @@ class FourroomsMA(gym.Env):
         right = 3
         # stay = 4
 
-    def __init__(self, n_agents = 3, goal_reward = 1., broadcast_penalty = -0.01, collision_penalty = -0.01, discount = 0.9):
+    def __init__(self, n_agents = params['env']['n_agents'], goal_reward = params['env']['goal_reward'], \
+                 broadcast_penalty = params['env']['broadcast_penalty'], \
+                 collision_penalty = params['env']['collision_penalty'], discount = params['env']['discount']):
         layout = """\
 wwwwwwwwwwwww
 w     w     w
@@ -117,7 +120,7 @@ wwwwwwwwwwwww
         self.states_list = [s for s in list(itertools.product(self.cell_list, repeat=self.n_agents))
                             if len(s) == len(np.unique(s))]
 
-        self.goals = [50, 62, 71, 98, 103]  # fixed goals
+        self.goals = [50, 71, 103] #[50, 62, 71, 98, 103]  # fixed goals
 
         self.goals.sort()                   # important if not already sorted in line above
         self.discovered_goals = []
@@ -135,6 +138,8 @@ wwwwwwwwwwwww
 
         # Render used to generate image frames
         self.grid_render = None
+
+        self.initial_states = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
 
         self.reset()
 
@@ -173,6 +178,7 @@ wwwwwwwwwwwww
 
         # Sample initial joint state (s_0,...,s_n) without collision
         initial_state = tuple(self.rng.choice(self.init_states, self.n_agents, replace=False))
+        #initial_state = self.initial_states
         for i in range(self.n_agents):
             self.agents[i].state = initial_state[i]     # Store state in agents
 
@@ -268,6 +274,7 @@ wwwwwwwwwwwww
 
 
         reward = np.sum(rewards)
+        # print('reward',reward,'discovered_goals',self.discovered_goals)
 
         self.step_count += 1
 
@@ -275,7 +282,7 @@ wwwwwwwwwwwww
         # If all goals were discovered, end episode
         done = len(self.discovered_goals) == len(self.goals)
 
-           
+        # print('reward in step:', reward)
         return reward, self.currstate, done, None 
 
     def neighbouringState(self,agent,action): # agent \in {0,1,2..}
@@ -486,6 +493,6 @@ wwwwwwwwwwwww
 register(
     id='FourroomsMA-v1',
     entry_point='fourroomsEnv:FourroomsMA',
-    timestep_limit=20000,
+    max_episode_steps=20000, #timestep_limit=20000,
     reward_threshold=1,  # should we modify this?
 )

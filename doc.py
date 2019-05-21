@@ -42,13 +42,14 @@ class DOC:
 		joint_state = tuple(np.sort(joint_state))
 		
 		joint_option = self.mu_policy.sample(joint_state)
+		print('joint_option',joint_option)
 		
-		for option in self.options:
-			option.available = True
-			
-		for option in joint_option:
-			self.options[option].available = False
-		
+		# for option in self.options:
+		# 	option.available = True
+		#
+		# for idx, option in enumerate(joint_option):
+		# 	self.options[idx][option].available = False
+
 		idx = 0
 		for agent in self.env.agents:
 			agent.option = joint_option[idx]
@@ -59,22 +60,18 @@ class DOC:
 	def chooseOptionOnTermination(self, options, joint_option, joint_state):
 		terminations = [1, 1, 1]
 		
-		for option in joint_option:
-			options[option].available = True
+		# for option in joint_option:
+		# 		# 	options[option].available = True
 		
 		sampled_joint_option = self.mu_policy.sample(joint_state=tuple(np.sort(joint_state)))
 		
-		# make the options unavailable
-		for option in sampled_joint_option:
-			options[option].available = False
+		# # make the options unavailable
+		# for option in sampled_joint_option:
+		# 	options[option].available = False
 		# return the joint options
-<<<<<<< HEAD
 
 		return sampled_joint_option, np.sum(terminations)
 
-=======
-		return sampled_joint_option, np.sum(terminations)
->>>>>>> 48826ef82b860ce6142d604849e7dc2331368dee
 	
 	# def chooseOptionOnTermination(self, options, joint_option, joint_state):
 	# 	terminations = []
@@ -138,8 +135,8 @@ class DOC:
 			
 	def chooseAction(self):
 		joint_action = []
-		for agent in self.env.agents:
-			action = self.options[agent.option].policy.sample(agent.state)
+		for idx, agent in enumerate(self.env.agents):
+			action = self.options[idx][agent.option].policy.sample(agent.state)
 			agent.action = action
 			# print('agent ID:', agent.ID, 'state:', agent.state, 'option ID:', agent.option, 'action:', action)
 			joint_action.append(action)
@@ -151,13 +148,17 @@ class DOC:
 		return self.broadcast.broadcastBasedOnQ(critic, reward, curr_true_joint_state, prev_sampled_joint_state, prev_joint_obs, 
 													prev_true_joint_state, prev_joint_action, joint_option,done)
 	
-	def evaluateOption(self, critic, action_critic, joint_state, joint_option, joint_action, reward,
+	def evaluateOption(self, critic, action_critic, agent_q, joint_state, joint_option, joint_action, reward,
 					   done, baseline=False):
 		# Critic update
 		critic.update(joint_state, joint_option, reward, done)
 		action_critic.update(joint_state, joint_option, joint_action, reward, done)
 		
 		critic_feedback = action_critic.getQvalue(joint_state, joint_option, joint_action)  # Q(s,o,a)
+		
+		# update agent Q
+		joint_state_agents = tuple([agent.state for agent in self.env.agents])
+		agent_q.update(joint_state_agents, joint_option, joint_action, reward, done)
 		
 		if baseline:
 			critic_feedback -= critic.value(joint_state, joint_option)

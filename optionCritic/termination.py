@@ -26,8 +26,4 @@ class OneStepTermination:
         return [1 for _ in range(np.shape(phi)[1])]
 
     def pmf(self, phi):
-<<<<<<< HEAD
         return [1. for _ in range(np.shape(phi)[1])]
-=======
-        return [1. for _ in range(np.shape(phi)[1])]
->>>>>>> 48826ef82b860ce6142d604849e7dc2331368dee

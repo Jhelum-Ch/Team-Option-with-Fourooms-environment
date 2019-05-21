@@ -331,7 +331,7 @@ class Trainer(object):
 			#self.writer.add_scalar('mean_belief_error', np.mean(belief_error), episode)
 			self.writer.add_scalar('Critic_Q_episode', calcCriticValue(self.critic.weights), episode)
 			#self.writer.add_scalar('Action_Critic_Q', action_critic_Q, episode)
-			self.writer.add_scalar('average_duration', np.array(switch_agent)/iteration, episode)
+			#self.writer.add_scalar('average_duration', np.array(switch_agent)/iteration, episode)
 			
 			# Save model
 			saveModelandMetrics(self)

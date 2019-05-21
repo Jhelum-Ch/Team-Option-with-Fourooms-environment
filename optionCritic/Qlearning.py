@@ -56,26 +56,17 @@ class IntraOptionQLearning:
 			max_idx, max_value = max(all_Q.items(), key=operator.itemgetter(1))
 			
 			return max_value
-<<<<<<< HEAD
-
-
-		if joint_option not in self.weights[joint_state].keys():
-				self.weights[joint_state][joint_option] = 0.0
-		
-		
-=======
 		
 		if joint_option not in self.weights[joint_state].keys():
 				self.weights[joint_state][joint_option] = 0.0
 		
->>>>>>> 48826ef82b860ce6142d604849e7dc2331368dee
 		return self.weights[joint_state][joint_option]
 	
 	def terminationProbOfAtLeastOneAgent(self, joint_state, joint_option):
 		# calculates termination probability of at least one agent
 		prod = 1.0
-		for idx in range(len(joint_state)):
-			prod *= 1 - self.terminations[joint_option[idx]].pmf(joint_state[idx])
+		for agent, (state, option) in enumerate(zip(joint_state, joint_option)):
+			prod *= 1 - self.terminations[agent][option].pmf(state)
 			
 		return 1.0 - prod
 
@@ -147,8 +138,8 @@ class IntraOptionActionQLearning:
 	def terminationProbOfAtLeastOneAgent(self, joint_state, joint_option):
 		# calculates termination probability of at least one agent
 		prod = 1.0
-		for idx in range(len(joint_state)):
-			prod *= 1 - self.terminations[joint_option[idx]].pmf(joint_state[idx])
+		for agent, (state, option) in enumerate(zip(joint_state, joint_option)):
+			prod *= 1 - self.terminations[agent][option].pmf(state)
 
 		return 1.0 - prod
 
@@ -214,24 +205,26 @@ class AgentQLearning:
 		self.last_joint_option = joint_option
 		self.last_joint_action = joint_action
 
-	def value(self, state, option, action):
-		return self.options[option].policy.weights[state, action]
+	def value(self, agent, state, option, action=None):
+		if action is None:
+			return self.options[agent][option].policy.weights[state]
+		return self.options[agent][option].policy.weights[state, action]
 
 	def update(self, joint_state, joint_option, joint_action, reward, done):
-		update_target = [reward] * len(joint_state)
+		update_target = [[reward for _ in range(params['agent']['n_options'])] for _ in range(params['env']['n_agents'])]
 		if not done:
 			for idx, state, option in zip(range(len(joint_state)), joint_state, joint_option):
-				action_pmfs = self.options[option].policy.weights[state, :]
-				update_target[idx] += self.discount * np.max(action_pmfs)
+				action_values = self.value(idx, state, option)
+				update_target[idx] += self.discount * np.max(action_values)
 
-		for idx, last_state, last_option, last_action in zip(range(len(self.last_joint_state)), self.last_joint_state,
-															 self.last_joint_option, self.last_joint_action):
-			tderror = update_target[idx] - self.value(last_state, last_option, last_action)
-			self.options[last_option].policy.weights[last_state, last_action] += self.lr * tderror
+		for idx, (last_state, last_option, last_action) in enumerate(zip(self.last_joint_state,
+															 self.last_joint_option, self.last_joint_action)):
+			tderror = update_target[idx][last_option] - self.value(idx, last_state, last_option, last_action)
+			self.options[idx][last_option].policy.weights[last_state, last_action] += self.lr * tderror
 
-		self.last_state = joint_state
-		self.last_option = joint_option
-		self.last_action = joint_action
+		self.last_joint_state = joint_state
+		self.last_joint_option = joint_option
+		self.last_joint_action = joint_action
 		
 		
 		

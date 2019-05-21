@@ -2,7 +2,7 @@ import numpy as np
 
 params = {
 	'env'	:	{
-		'n_agents'			:	3,
+		'n_agents'			:	2,
 		'goal_reward' 		:	 1,
 		'broadcast_penalty'	:  -0.02,
 		'collision_penalty' :  -0.01,
@@ -13,7 +13,7 @@ params = {
 		#'initial_joint_state'	:	(11, 31, 21)
 	},
 	'agent'	:	{
-		'n_options'	:	5,
+		'n_options'	:	3,
 		'n_actions'	:	4
 	},
 	'policy'	:	{
@@ -26,8 +26,8 @@ params = {
 		'n_steps' 		: 	1000,
 		'seed'			:	1234,
 		# 'discount'		:	0.1,
-		'lr_critic'		: 	0.01,	#alpha_Q
-		'lr_action_critic'	: 0.01,
+		'lr_critic'		: 	0.05,	#alpha_Q
+		'lr_action_critic'	: 0.05,
 		'lr_agent_q'		: 0.01,
 		'lr_theta'			: 0.01,
 		'lr_phi'			: 0.01,
