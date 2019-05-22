@@ -120,7 +120,7 @@ wwwwwwwwwwwww
         self.states_list = [s for s in list(itertools.product(self.cell_list, repeat=self.n_agents))
                             if len(s) == len(np.unique(s))]
 
-        self.goals = [50, 62, 71, 98, 103]  # [50, 71, 103] #fixed goals
+        self.goals = [50, 62, 71, 98, 103]  # [50, 71, 103] [50] #fixed goals [50]
 
         self.goals.sort()                   # important if not already sorted in line above
         self.discovered_goals = []
@@ -264,6 +264,7 @@ wwwwwwwwwwwww
                 s = nextcells[i]                        # movement is valid
                 self.agents[i].state = s
                 if s in self.goals and s not in self.discovered_goals:
+                    print('Goal found :', s)
                     rewards[i] += self.goal_reward
                     self.discovered_goals.append(s)
             #rewards[i] += broadcasts[i]*self.broadcast_penalty
