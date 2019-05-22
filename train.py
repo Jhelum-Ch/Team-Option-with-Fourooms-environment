@@ -161,7 +161,7 @@ class Trainer(object):
 			self.agent_q.start(joint_state, joint_option, joint_action)
 			
 			# done = False
-			# cum_reward = 0
+			cum_reward = 0
 			itr_critic_Q = []
 			itr_action_critic_Q = []
 			c = 0.0
@@ -190,7 +190,7 @@ class Trainer(object):
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
 				
 				# vii - viii
-				broadcasts, error_tuple = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
+				broadcasts, selfishness_penalties = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
 											 prev_sampled_joint_state = sampled_joint_state,
 											 prev_joint_obs = prev_joint_obs,
 											 prev_true_joint_state = prev_joint_state, 
@@ -199,14 +199,17 @@ class Trainer(object):
 											 done = done, 
 											 critic = self.critic, 
 											 reward = reward)
+
+				print('broadcasts',broadcasts,'error_tuple',selfishness_penalties)
+				print('bp', np.sum([broadcasts[i] * self.env.broadcast_penalty for i in range(len(broadcasts))]), 'sp', np.sum((1-broadcasts[i])*selfishness_penalties[i] for i in range(len(broadcasts))))
 				
-				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
+				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*selfishness_penalties[i] for i in range(len(broadcasts))])
 
 
 				cum_reward = reward + params['env']['discount'] * cum_reward
 
-				if reward > 0.:
-					print('reward',reward,'cum_reward',cum_reward)
+				# if reward > 0.:
+				# 	print('reward',reward,'cum_reward',cum_reward)
 
 				if iteration == 0:
 					joint_observation = prev_joint_obs
