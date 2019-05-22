@@ -10,6 +10,7 @@ from utils.misc import saveModelandMetrics
 from tensorboardX import SummaryWriter
 import pickle
 import os
+import threading
 
 
 class Trainer(object):
@@ -18,6 +19,7 @@ class Trainer(object):
 		self.env = env
 		self.n_agents = params['env']['n_agents']
 		self.writer = SummaryWriter(log_dir=expt_folder)
+		self.output = []
 	
 	def estimate_next_joint_state(self, joint_observation, sampled_joint_state):
 		sampled_joint_state = tuple(np.sort(sampled_joint_state))
@@ -63,60 +65,79 @@ class Trainer(object):
 	# 	return avg_dur
 		
 	def train(self):
-		for _ in range(params['train']['n_runs']):
-			# put the agents to the same initial joint state as long as the random seed set in params['train'][
-			# 'seed'] in modelConfig remains unchanged
-			#joint_state = self.env.reset()
-			
-			
-			alpha = 0.001 * np.ones(len(self.env.states_list))
-			self.belief = MultinomialDirichletBelief(self.env, alpha)
+		threads = []
+		seeds = np.random.randint(5000, size=params['train']['n_runs'])
+		for _, (run, curr_seed) in enumerate(zip(range(params['train']['n_runs']), seeds)):
+			print('run:',run)
+			t = threading.Thread(self.trainEpisodes(curr_seed))
+			threads.append(t)
+			t.start()
 
-			# deliberation cost 
+		for x in threads:
+			x.join()
 
-			# eta = params['train']['deliberation_cost']
-			
-			# create option pool
-			self.options, self.mu_policy = createOptions(self.env)
-			# options is a list of option object. Each option object has its own termination policy and pi_policy.
-			# pi_policy for option 0 can be called as	:	options[0].policy.weights
-			# options[0].policy is the object of SoftmaxActionPolicy()
-			# termination for option 0 can be called as	:	options[0].termination.weights
-
-			terminations = []
-			for agent_idx in range(params['env']['n_agents']):
-				terminations.append([option.termination for option in self.options[agent_idx]])
-			
-			self.doc = DOC(self.env, self.options, self.mu_policy)
-			
-			self.critic = IntraOptionQLearning(discount=params['env']['discount'],
-										  lr=params['train']['lr_critic'],
-										  terminations=terminations,
-										  weights=self.mu_policy.weights)
-			
-			self.action_critic = IntraOptionActionQLearning(discount=params['env']['discount'],
-													   lr=params['train']['lr_critic'],
-													   terminations=terminations,
-													   qbigomega=self.critic)
-			
-			self.agent_q = AgentQLearning(discount=params['env']['discount'],
-									 lr=params['train']['lr_agent_q'],
-									 options=self.options)
-			
-			self.termination_gradient = TerminationGradient(self.options, self.critic, terminations)
-			self.intra_option_policy_gradient = IntraOptionGradient(self.options)
-
-			self.trainEpisodes()
+		np.save(os.path.join(self.expt_folder, 'history_all_runs.npy'), np.asarray(self.output))
+		np.save(os.path.join(self.expt_folder, 'seeds.npy'), np.asarray(seeds))
 			
 
-	def trainEpisodes(self):
+	def trainEpisodes(self, myseed):
+
+		params['train']['seed'] = myseed
+		print(myseed)
+
+
+		# initialize everything
+
+		# put the agents to the same initial joint state as long as the random seed set in params['train'][
+		# 'seed'] in modelConfig remains unchanged
+		# joint_state = self.env.reset()
+
+		alpha = 0.001 * np.ones(len(self.env.states_list))
+		self.belief = MultinomialDirichletBelief(self.env, alpha)
+
+		# deliberation cost
+
+		# eta = params['train']['deliberation_cost']
+
+		# create option pool
+		self.options, self.mu_policy = createOptions(self.env)
+		# options is a list of option object. Each option object has its own termination policy and pi_policy.
+		# pi_policy for option 0 can be called as	:	options[0].policy.weights
+		# options[0].policy is the object of SoftmaxActionPolicy()
+		# termination for option 0 can be called as	:	options[0].termination.weights
+
+		terminations = []
+		for agent_idx in range(params['env']['n_agents']):
+			terminations.append([option.termination for option in self.options[agent_idx]])
+
+		self.doc = DOC(self.env, self.options, self.mu_policy)
+
+		self.critic = IntraOptionQLearning(discount=params['env']['discount'],
+										   lr=params['train']['lr_critic'],
+										   terminations=terminations,
+										   weights=self.mu_policy.weights)
+
+		self.action_critic = IntraOptionActionQLearning(discount=params['env']['discount'],
+														lr=params['train']['lr_critic'],
+														terminations=terminations,
+														qbigomega=self.critic)
+
+		self.agent_q = AgentQLearning(discount=params['env']['discount'],
+									  lr=params['train']['lr_agent_q'],
+									  options=self.options)
+
+		self.termination_gradient = TerminationGradient(self.options, self.critic, terminations)
+		self.intra_option_policy_gradient = IntraOptionGradient(self.options)
+
+		# end of initialization
 
 		iterations = 0
 		# episode_critic_Q = []
 		# episode_action_critic_Q = []
 
 		params['policy']['temperature'] = 1
-		cum_reward = 0
+		# cum_reward = 0
+		history = np.zeros((params['train']['n_episodes'], 4), dtype=np.float32) # 0.Return 1.episode_length 2.criticQValue, 3.action_critic_Q
 
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
@@ -152,9 +173,7 @@ class Trainer(object):
 			self.agent_q.start(joint_state, joint_option, joint_action)
 			
 			# done = False
-			# cum_reward = 0
-			itr_critic_Q = []
-			itr_action_critic_Q = []
+			cum_reward = 0
 			c = 0.0
 			
 			for iteration in range(params['env']['episode_length']):
@@ -181,18 +200,20 @@ class Trainer(object):
 				# vi - absorbed in broadcastBasedOnQ function of Broadcast class
 				
 				# vii - viii
-				broadcasts, error_tuple = self.doc.toBroadcast(curr_true_joint_state = joint_state, 
+				broadcasts, error_tuple = self.doc.toBroadcast(curr_true_joint_state = joint_state,
 											 prev_sampled_joint_state = sampled_joint_state,
 											 prev_joint_obs = prev_joint_obs,
-											 prev_true_joint_state = prev_joint_state, 
-											 prev_joint_action = prev_joint_action, 
-											 joint_option = joint_option, 
-											 done = done, 
-											 critic = self.critic, 
+											 prev_true_joint_state = prev_joint_state,
+											 prev_joint_action = prev_joint_action,
+											 joint_option = joint_option,
+											 done = done,
+											 critic = self.critic,
 											 reward = reward)
-				
-				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))])
 
+				b = [broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*error_tuple[i] for i in range(len(broadcasts))]
+				broadcast_penalty = np.sum(b)
+				# print(self.env.broadcast_penalty, b, broadcast_penalty)
+				reward += broadcast_penalty
 
 				cum_reward = reward + params['env']['discount'] * cum_reward
 				# if reward > 0.:
@@ -278,11 +299,23 @@ class Trainer(object):
 			self.writer.add_scalar('Critic_Q_episode', critic_Q, episode)
 			# self.writer.add_scalar('Action_Critic_Q', np.mean(itr_action_critic_Q), episode)
 
-			# Save model
-			if episode == params['train']['n_episodes'] - 1:
-				saveModelandMetrics(self)
-			elif episode % 5 == 0:
-				saveModelandMetrics(self)
+			# save
+			history[episode, 0] = cum_reward
+			history[episode, 1] = iteration
+			history[episode, 2] = critic_Q
+			history[episode, 3] = action_critic_Q
+
+			# print(cum_reward, iteration, critic_Q, action_critic_Q)
+
+			np.save(os.path.join(self.expt_folder, 'history%s.npy'%iteration), history)
+
+			self.output.append(history)
+
+			# # Save model
+			# if episode == params['train']['n_episodes'] - 1:
+			# 	saveModelandMetrics(self)
+			# elif episode % 5 == 0:
+			# 	saveModelandMetrics(self)
 
 			#TODO: Plot in average duration tensorboard
 
