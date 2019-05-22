@@ -18,6 +18,7 @@ class Broadcast:
 
         broadcasts = np.zeros(self.env.n_agents)
         error_tuple = np.zeros(self.env.n_agents)
+        selfishness_penalty = np.zeros(self.env.n_agents)
         
         for agent in self.env.agents:
             estimated_curr_joint_state = np.zeros(self.env.n_agents)
@@ -74,7 +75,7 @@ class Broadcast:
 
             error_due_to_no_broadcast = np.linalg.norm([i-j for (i,j) in zip(estimated_own_curr_cell,self.env.tocellcoord[curr_true_joint_state[agent.ID]])])
             error_tuple[agent.ID] = error_due_to_no_broadcast
-            selfishness_penalty = params['env']['selfishness_penalty']*error_due_to_no_broadcast*(error_due_to_no_broadcast > self.no_broadcast_threshold)
+            selfishness_penalty[agent.ID] = params['env']['selfishness_penalty']*error_due_to_no_broadcast*(error_due_to_no_broadcast > self.no_broadcast_threshold)
             #critic = IntraOptionQLearning(params['env']['discount'], params['doc']['lr_Q'],self.terminations, option_weights)
             
             estimated_curr_joint_state = [int(item) for item in estimated_curr_joint_state] # make th entries integer
@@ -86,12 +87,12 @@ class Broadcast:
             # Q_agent_with_broadcast = q1.getQvalue(modified_current_joint_state, None, self.joint_option)
 
             critic2 =copy.deepcopy(critic)
-            Q_agent_without_broadcast = critic2.update(tuple(estimated_curr_joint_state), self.joint_option, reward+selfishness_penalty, self.done)
+            Q_agent_without_broadcast = critic2.update(tuple(estimated_curr_joint_state), self.joint_option, reward+selfishness_penalty[agent.ID], self.done)
             # q2 = critic2.update(modified_current_joint_state, self.joint_option, reward, self.done)
             # Q_agent_without_broadcast = q2.getQvalue(modified_current_joint_state, None, self.joint_option)
             broadcasts[agent.ID] = 1*((agent.state in self.env.goals) or (Q_agent_with_broadcast >= Q_agent_without_broadcast))
             
-        return tuple(broadcasts), tuple(error_tuple)
+        return tuple(broadcasts), tuple(selfishness_penalty)
 
 
     def randomBroadcast(self, state):
