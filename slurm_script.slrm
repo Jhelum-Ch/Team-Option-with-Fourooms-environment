@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH --job-name=job%j-%2t
+#SBATCH --output=/private/home/sumanab/logs/multiagent/stdout/job%j
+#SBATCH --error=/private/home/sumanab/logs/multiagent/stderr/job%j
+#SBATCH --partition=learnfair
+#SBATCH --cpus-per-task=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem=128000
+#SBATCH --time=4320
+#SBATCH --comment="none"
+#SBATCH --nodes=1
+cd /private/home/sumanab/multiagent
+srun --label python main.py
