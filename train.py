@@ -1,6 +1,6 @@
 from optionCritic.option import createOptions
 from doc import DOC
-from modelConfig import params
+from modelConfig import params, paths
 from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning, AgentQLearning
 from distributed.belief import MultinomialDirichletBelief
 from optionCritic.gradients import TerminationGradient, IntraOptionGradient
@@ -8,18 +8,18 @@ import numpy as np
 from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue, calcAgentActionValue, calcOptionValue
 from utils.misc import saveModelandMetrics
 from tensorboardX import SummaryWriter
-import pickle
 import os
-import threading
+# import threading
 
 
 class Trainer(object):
-	def __init__(self, env, expt_folder):
+	def __init__(self, env, expt_folder, timestr):
 		self.expt_folder = expt_folder
 		self.env = env
 		self.n_agents = params['env']['n_agents']
 		self.writer = SummaryWriter(log_dir=expt_folder)
-		self.output = []
+		self.timestr = timestr
+		# self.output = []
 	
 	def estimate_next_joint_state(self, joint_observation, sampled_joint_state):
 		sampled_joint_state = tuple(np.sort(sampled_joint_state))
@@ -64,27 +64,23 @@ class Trainer(object):
 	# 		avg_dur.append(count[k] / (len(listOfOptions) - 1))
 	# 	return avg_dur
 		
-	def train(self):
-		threads = []
-		seeds = np.random.randint(5000, size=params['train']['n_runs'])
-		for _, (run, curr_seed) in enumerate(zip(range(params['train']['n_runs']), seeds)):
-			print('run:',run)
-			t = threading.Thread(self.trainEpisodes(curr_seed))
-			threads.append(t)
-			t.start()
-
-		for x in threads:
-			x.join()
-
-		np.save(os.path.join(self.expt_folder, 'history_all_runs.npy'), np.asarray(self.output))
-		np.save(os.path.join(self.expt_folder, 'seeds.npy'), np.asarray(seeds))
+	# def train(self):
+	# 	threads = []
+	# 	seeds = np.random.randint(5000, size=params['train']['n_runs'])
+	# 	for _, (run, curr_seed) in enumerate(zip(range(params['train']['n_runs']), seeds)):
+	# 		print('run:',run)
+	# 		t = threading.Thread(self.trainEpisodes(curr_seed))
+	# 		threads.append(t)
+	# 		t.start()
+	#
+	# 	for x in threads:
+	# 		x.join()
+	#
+	# 	np.save(os.path.join(self.expt_folder, 'history_all_runs.npy'), np.asarray(self.output))
+	# 	np.save(os.path.join(self.expt_folder, 'seeds.npy'), np.asarray(seeds))
 			
 
-	def trainEpisodes(self, myseed):
-
-		params['train']['seed'] = myseed
-		print(myseed)
-
+	def trainEpisodes(self):
 
 		# initialize everything
 
@@ -137,7 +133,7 @@ class Trainer(object):
 
 		params['policy']['temperature'] = 1
 		# cum_reward = 0
-		history = np.zeros((params['train']['n_episodes'], 4), dtype=np.float32) # 0.Return 1.episode_length 2.criticQValue, 3.action_critic_Q
+		history = np.zeros((5, params['train']['n_episodes']), dtype=np.float32) # 0.Return 1.episode_length 2.criticQValue, 3.action_critic_Q
 
 		for episode in range(params['train']['n_episodes']):
 			print('Episode : ', episode)
@@ -300,22 +296,25 @@ class Trainer(object):
 			# self.writer.add_scalar('Action_Critic_Q', np.mean(itr_action_critic_Q), episode)
 
 			# save
-			history[episode, 0] = cum_reward
-			history[episode, 1] = iteration
-			history[episode, 2] = critic_Q
-			history[episode, 3] = action_critic_Q
+			history[0, episode] = cum_reward
+			history[1, episode] = iteration
+			history[2, episode] = critic_Q
+			history[3, episode] = action_critic_Q
+			history[4, episode] = supNormQ
 
 			# print(cum_reward, iteration, critic_Q, action_critic_Q)
 
-			np.save(os.path.join(self.expt_folder, 'history%s.npy'%iteration), history)
+			np.save(os.path.join(self.expt_folder, 'history.npy'), history)
+			np.save(os.path.join(paths['output']['graphs_folder'], 'history_%s.npy'%self.timestr), history)
+			# np.save(os.path.join('/private/home/sumanab/multiagent/experiments/', self.expt_folder, 'history_%s.npy' % self.timestr), history)
 
-			self.output.append(history)
+			# self.output.append(history)
 
-			# # Save model
-			# if episode == params['train']['n_episodes'] - 1:
-			# 	saveModelandMetrics(self)
-			# elif episode % 5 == 0:
-			# 	saveModelandMetrics(self)
+			# Save model
+			if episode == params['train']['n_episodes'] - 1:
+				saveModelandMetrics(self)
+			elif episode % 10 == 0:
+				saveModelandMetrics(self)
 
 			#TODO: Plot in average duration tensorboard
 
