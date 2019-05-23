@@ -40,7 +40,10 @@ seed = np.random.RandomState(params['train']['seed'])
 
 paths = {
 	'output'	:	{
-		#'base_folder'	:	'/home/andreiwolf/RL/teamOption/selfishMAOC/teamOptionResults_selfish/'
-		'base_folder' : '/home/ml/jchakr1/selfishMAOC_AL_results'
+
+		# 'base_folder'	:	'/private/home/sumanab/multiagent/experiments/',
+		'base_folder'	:	'/private/home/sumanab/checkpoint/multiagent/experiments4/',
+		#'base_folder'	:	'/home/ml/sbasu11/Documents/MultiAgent/experiments/',
+		'graphs_folder'	:	'/private/home/sumanab/checkpoint/multiagent/graphs4/'
 	}
 }

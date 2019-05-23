@@ -1,6 +1,6 @@
-from selfish_fourroomsEnv import Selfish_FourroomsMA
+from fourroomsEnv import FourroomsMA
 from modelConfig import params, paths
-from utils.unitTest import testCreateOption, testQ, testSoftmaxOptionPolicy #testActionSelection, testIntraOptionQLearning
+# from utils.unitTest import testCreateOption, testQ, testSoftmaxOptionPolicy #testActionSelection, testIntraOptionQLearning
 from train import Trainer
 import time
 import os
@@ -14,13 +14,14 @@ def main():
 	
 	print('Run : {}\n'.format(timestr))
 	
-	env = Selfish_FourroomsMA(n_agents=params['env']['n_agents'],
+	env = FourroomsMA(n_agents=params['env']['n_agents'],
 					  goal_reward = params['env']['goal_reward'],
-					  collision_penalty = params['env']['collision_penalty'],
-					  discount = params['env']['discount'])
+					  broadcast_penalty =params['env']['broadcast_penalty'],
+					  collision_penalty = params['env']['collision_penalty'])
 	
-	trainer = Trainer(env, expt_folder)
-	trainer.train()
+	trainer = Trainer(env, expt_folder, timestr)
+	# trainer.train()
+	trainer.trainEpisodes()
 	
 	
 if __name__ == '__main__':
