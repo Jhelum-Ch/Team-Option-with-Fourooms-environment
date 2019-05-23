@@ -1,6 +1,6 @@
 from fourroomsEnv import FourroomsMA
 from modelConfig import params, paths
-from utils.unitTest import testCreateOption, testQ, testSoftmaxOptionPolicy #testActionSelection, testIntraOptionQLearning
+# from utils.unitTest import testCreateOption, testQ, testSoftmaxOptionPolicy #testActionSelection, testIntraOptionQLearning
 from train import Trainer
 import time
 import os
@@ -19,8 +19,9 @@ def main():
 					  broadcast_penalty =params['env']['broadcast_penalty'],
 					  collision_penalty = params['env']['collision_penalty'])
 	
-	trainer = Trainer(env, expt_folder)
-	trainer.train()
+	trainer = Trainer(env, expt_folder, timestr)
+	# trainer.train()
+	trainer.trainEpisodes()
 	
 	
 if __name__ == '__main__':

@@ -17,8 +17,6 @@ class SoftmaxOptionPolicy:
 	def pmf(self, joint_state):
 		v = np.array(list(self.weights[joint_state].values())) / self.temp
 		pmf = np.exp(v - logsumexp(v))
-		pmf = params['policy']['epsilon']*self.rng.uniform() + (1-params['policy']['epsilon'])*pmf
-		pmf /= np.sum(pmf)
 		return pmf
 	
 	def sample(self, joint_state):
@@ -147,8 +145,6 @@ class SoftmaxActionPolicy:
 	def pmf(self, phi):
 		v = self.value(phi) / self.temp
 		pmf = np.exp(v - logsumexp(v))
-		pmf = params['policy']['epsilon']*self.rng.uniform() + (1-params['policy']['epsilon'])*pmf
-		pmf /= np.sum(pmf)
 		return pmf
 	
 	def sample(self, phi):

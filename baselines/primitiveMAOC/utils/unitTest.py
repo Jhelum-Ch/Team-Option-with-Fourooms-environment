@@ -5,11 +5,16 @@ from optionCritic.termination import SigmoidTermination
 from optionCritic.option import createOptions
 from random import shuffle
 from doc import DOC
+#from distributed.belief import MultinomialDirichletBelief
 from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning
 import numpy as np
 import itertools
 import random
 import operator
+
+
+#from fourroomsEnv import FourroomsMA
+
 
 def testCreateOption(env):
 	options, mu_policy = createOptions(env)
@@ -154,7 +159,6 @@ def testSoftmaxOptionPolicy(env):
 	print(policy.sample((30,)))
 
 
-
 # def testBelief(env):
 # 	alpha = 0.001 * np.ones(len(env.states_list))
 # 	belief = MultinomialDirichletBelief(env,alpha)
@@ -251,4 +255,7 @@ def testSoftmaxOptionPolicy(env):
 	# 	#print(weights[(5, 6, 64)].values())
 	#
 	# #testDict()
+
+		
+	
 
