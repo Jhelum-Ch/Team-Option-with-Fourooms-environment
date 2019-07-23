@@ -2,12 +2,14 @@ from optionCritic.option import createOptions
 from doc import DOC
 from modelConfig import params
 from optionCritic.Qlearning import IntraOptionQLearning, IntraOptionActionQLearning, AgentQLearning
-from distributed.belief import MultinomialDirichletBelief
+# from distributed.belief import MultinomialDirichletBelief
+from distributed.factored_belief_agent import MultinomialDirichletBelief
 from optionCritic.gradients import TerminationGradient, IntraOptionGradient
 import numpy as np
 from utils.viz import plotReward, calcErrorInBelief, calcCriticValue, calcActionCriticValue, calcAgentActionValue, calcOptionValue
 from utils.misc import saveModelandMetrics
 from tensorboardX import SummaryWriter
+from tqdm import tqdm
 import pickle
 import os
 
@@ -62,14 +64,20 @@ class Trainer(object):
 	# 		avg_dur.append(count[k] / (len(listOfOptions) - 1))
 	# 	return avg_dur
 		
-	def train(self):
-		for _ in range(params['train']['n_runs']):
+	def train(self, pbar="default_pbar"):
+		self.all_run_ep_steps = np.zeros((params['train']['n_runs'], params['train']['n_episodes']))
+		self.all_run_ep_cum_rew = np.zeros((params['train']['n_runs'], params['train']['n_episodes']))
+		for run in range(params['train']['n_runs']):
+			self.run = run
 			# put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# 'seed'] in modelConfig remains unchanged
 			#joint_state = self.env.reset()
 			
 			
-			alpha = 0.001 * np.ones(len(self.env.states_list))
+			# alpha = 0.001 * np.ones(len(self.env.states_list))
+
+
+			alpha = 0.001 * np.ones(len(self.env.cell_list))
 			self.belief = MultinomialDirichletBelief(self.env, alpha)
 
 			# deliberation cost 
@@ -107,6 +115,13 @@ class Trainer(object):
 			self.intra_option_policy_gradient = IntraOptionGradient(self.options)
 
 			self.trainEpisodes()
+
+			self.total_num_frames = params['train']['n_runs']*params['train']['n_episodes']*params['env']['episode_length']
+
+			if pbar is not None:
+				pbar = tqdm()
+
+		return self.all_run_ep_steps, self.all_run_ep_cum_rew
 			
 
 	def trainEpisodes(self):
@@ -120,7 +135,7 @@ class Trainer(object):
 		explore_param = 3*params['env']['goal_reward']
 
 		for episode in range(params['train']['n_episodes']):
-			print('Episode : ', episode)
+			#print('Episode : ', episode)
 			
 			params['policy']['temperature'] = 1
 			if params['policy']['temperature'] > 0.1:
@@ -139,7 +154,7 @@ class Trainer(object):
 			# # put the agents to the same initial joint state as long as the random seed set in params['train'][
 			# # 'f'] in modelConfig remains unchanged
 			joint_state = self.env.reset()
-			print('Initial State:',joint_state)
+			#print('Initial State:',joint_state)
 			prev_joint_state = joint_state
 			prev_joint_obs = [(joint_state[i],None) for i in range(self.env.n_agents)]
 			prev_joint_action = tuple([None for _ in range(self.env.n_agents)])
@@ -147,7 +162,7 @@ class Trainer(object):
 			#
 			# belief = MultinomialDirichletBelief(self.env, joint_observation)
 			sampled_joint_state = joint_state
-			old_feasible_states = joint_state
+			old_feasible_states = list(joint_state)
 			
 			
 			# d. Choose joint-option o based on softmax option-policy mu
@@ -174,8 +189,8 @@ class Trainer(object):
 				# 	else:
 				# 		params['policy']['temperature'] = 0.05
 
-				if iteration % 50 == 0:
-					print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :', self.env.discovered_goals)
+				# if iteration % 50 == 0:
+				# 	print('Iteration : ', iteration, 'Cumulative Reward : ', cum_reward, 'Discovered Goals :', self.env.discovered_goals)
 
 
 				joint_action = self.doc.chooseAction()
@@ -200,23 +215,52 @@ class Trainer(object):
 											 critic = self.critic, 
 											 reward = reward)
 
-				print('broadcasts',broadcasts,'error_tuple',selfishness_penalties)
-				print('bp', np.sum([broadcasts[i] * self.env.broadcast_penalty for i in range(len(broadcasts))]), 'sp', np.sum((1-broadcasts[i])*selfishness_penalties[i] for i in range(len(broadcasts))))
+				#print('broadcasts',broadcasts,'error_tuple',selfishness_penalties)
+				#print('bp', np.sum([broadcasts[i] * self.env.broadcast_penalty for i in range(len(broadcasts))]), 'sp', np.sum((1-broadcasts[i])*selfishness_penalties[i] for i in range(len(broadcasts))))
 				
 				reward += np.sum([broadcasts[i] * self.env.broadcast_penalty + (1-broadcasts[i])*selfishness_penalties[i] for i in range(len(broadcasts))])
 
 
 				cum_reward = reward + params['env']['discount'] * cum_reward
 
+
 				# if reward > 0.:
 				# 	print('reward',reward,'cum_reward',cum_reward)
+				#
 
+				sampled_joint_state = [0 for _ in range(params['env']['n_agents'])]
 				if iteration == 0:
+					#print('Hi')
 					joint_observation = prev_joint_obs
 				else:
 					joint_observation = self.env.get_observation(broadcasts)
-					self.belief.update(joint_observation, old_feasible_states)
-					sampled_joint_state = self.belief.sampleJointState()
+				#print('iteration', iteration, 'brd', broadcasts, 'joint_obs', joint_observation)
+
+				for i in range(params['env']['n_agents']):
+					if iteration == 0 or broadcasts[i] == 1:
+						#print('Hi')
+						sampled_joint_state[i] = int(joint_state[i])
+					else:
+						#print('joint_observation[i]', joint_observation[i], 'old_feasible_states[i]', old_feasible_states[i])
+						self.belief.update(joint_observation[i], old_feasible_states[i])
+						sampled_joint_state[i] = int(self.belief.sampleJointState())
+
+				while len(set(sampled_joint_state)) < len(sampled_joint_state):
+					#print('Hi')
+					resampling = {(k,v):False for k,v in zip(range(params['env']['n_agents']),sampled_joint_state)}
+					for j in range(params['env']['n_agents']):
+						if sampled_joint_state.count(sampled_joint_state[j]) > 1 and resampling[(j,sampled_joint_state[j])] is False:
+							sampled_joint_state[j] = int(self.belief.sampleJointState())
+							resampling[(j,sampled_joint_state[j])] = True
+				#print('resampled', sampled_joint_state)
+
+				js = [self.env.tocellcoord[s] for s in joint_state]
+				sampled_js = [self.env.tocellcoord[s] for s in sampled_joint_state]
+				#print('joint_state',js , 'sampled_joint_state', sampled_js)
+				# if iteration % 50 == 0:
+				#
+				# 	print('ep: ', episode, 'iter', iteration, 'brd: ', broadcasts, 'obs: ', joint_observation, 'j_state: ', js, \
+				#   'sampled_state: ', sampled_js)
 
 
 				estimated_next_joint_state = self.estimate_next_joint_state(joint_observation,sampled_joint_state)
@@ -253,14 +297,6 @@ class Trainer(object):
 
 				next_joint_option, switch = self.doc.chooseOptionOnTermination(self.options, joint_option, sampled_joint_state)
 
-				# switches += switch
-				# # change_in_options = [currJO != nextJO for (currJO,nextJO) in zip(joint_option,next_joint_option)]
-
-				# if switch:
-				# 	c = 0.0001*params['train']['deliberation_cost']*switch
-				# else:
-				# 	c = 0
-
 				joint_option = next_joint_option
 				
 				prev_joint_state = joint_state
@@ -271,7 +307,11 @@ class Trainer(object):
 
 				prev_joint_action = joint_action
 
-				old_feasible_states = self.belief.new_feasible_state(old_feasible_states,joint_observation)
+				for i in range(params['env']['n_agents']):
+					if iteration == 0:
+						old_feasible_states[i] = self.belief.new_feasible_state(old_feasible_states[i],joint_observation[i])
+					else:
+						old_feasible_states[i] = self.belief.new_feasible_state(old_feasible_states[i])
 
 				if done:
 					break
@@ -298,7 +338,8 @@ class Trainer(object):
 
 				# if iteration == 1:
 				# 	break
-
+			self.all_run_ep_steps[self.run,episode] = iteration
+			self.all_run_ep_cum_rew[self.run,episode] = cum_reward
 			# tensorboard plots
 			self.writer.add_scalar('cumulative_reward', cum_reward, episode)
 			self.writer.add_scalar('episode_length', iteration, episode)

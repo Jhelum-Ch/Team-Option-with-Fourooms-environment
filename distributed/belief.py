@@ -33,14 +33,14 @@ class MultinomialDirichletBelief:
 		
 		
 		# Set the counts vector zero
-		counts_vec = [self.counts.get(i, 0) for i in range(len(self.states_list))]
+		self.counts_vec = [self.counts.get(i, 0) for i in range(len(self.states_list))]
 
 		if True not in [self.joint_observation[i] is None for i in range(len(self.joint_observation))]:
 			observed_states = tuple([item[0] for item in self.joint_observation])
 
 			for item in self.states_list:
 				if item == observed_states:
-					counts_vec[self.states_list.index(item)] += 10000000
+					self.counts_vec[self.states_list.index(item)] += 10000000
 					break
 					
 		else:
@@ -75,13 +75,13 @@ class MultinomialDirichletBelief:
 				# print(item)
 				item = tuple([int(i) for i in item])
 				self.counts[item] += 10000000
-				counts_vec[self.states_list.index(item)] += 10000000
+				self.counts_vec[self.states_list.index(item)] += 10000000
 
 
-		return MultinomialDirichletBelief(self.env, np.add(self.alpha,counts_vec))
+		return MultinomialDirichletBelief(self.env, np.add(self.alpha,self.counts_vec))
 
 	def pmf(self):
-		a = stats.dirichlet.rvs(self.alpha, size=1, random_state=1)
+		a = stats.dirichlet.rvs(self.alpha + self.counts_vec, size=1, random_state=1)
 		return a[0]
 		
 	
@@ -107,7 +107,7 @@ class MultinomialDirichletBelief:
 		rs = np.zeros(params['env']['n_agents'])
 		while consistent is False and sample_count <= self.sample_count:
 			sampled_joint_state = self.sampleJointState()
-			print(sampled_joint_state)
+			#print(sampled_joint_state)
 			for agent in range(params['env']['n_agents']):
 				# rejection sampling
 				rs[agent] = 1.0 * (sampled_joint_state[agent] in neighborhood[

@@ -74,6 +74,6 @@ def createOptions(env):
 				len(env.cell_list))))
 		options_all_agents.append(options)
 
-		print(options_all_agents)
+		#print(options_all_agents)
 		
 	return options_all_agents, mu_policy

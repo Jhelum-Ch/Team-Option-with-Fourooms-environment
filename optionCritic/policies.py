@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.misc import logsumexp
+# from scipy.misc import logsumexp
+from scipy.special import logsumexp
 from modelConfig import params, seed
 
 

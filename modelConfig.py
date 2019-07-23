@@ -21,7 +21,7 @@ params = {
 		'epsilon' : 0.05
 	},
 	'train': {
-		'n_runs'		: 	1,
+		'n_runs'		: 	5,
 		# 'n_epochs'		: 	50,
 		'n_episodes'	:	200,
 		# 'n_steps' 		: 	1000,
@@ -43,5 +43,6 @@ paths = {
 
 		#'base_folder'	:	'/private/home/sumanab/multiagent/experiments/' #'/home/ml/sbasu11/Documents/MultiAgent/experiments/'
 		'base_folder'	:	'/home/ml/jchakr1/teamOptionResults/'
+        #'base_folder'	: '/Users/jhelumchakravorty/Dropbox/From_desktop/simulations/teamOptionFourroomsResults/'
 	}
 }
