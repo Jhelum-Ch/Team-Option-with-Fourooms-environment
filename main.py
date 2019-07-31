@@ -29,18 +29,19 @@ def main():
 
 	episodes = all_run_steps.shape[1]
 
+
 	# Plot
 	fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, sharex=True)
 
-	ax1.plot(episodes, mu1, color='black')
-	ax1.fill_between(episodes, mu1 + sigma1, mu1 - sigma1, facecolor='grey', alpha=0.5)
+	ax1.plot(range(episodes), mu1, color='black')
+	ax1.fill_between(range(episodes), mu1 + sigma1, mu1 - sigma1, facecolor='grey', alpha=0.5)
 	ax1.set_xlabel('number of episodes')
 	ax1.set_ylabel('Average episode lengths')
 
 
 
-	ax2.plot(episodes, mu2, color='black')
-	ax1.fill_between(episodes, mu2 + sigma2, mu2 - sigma2, facecolor='grey', alpha=0.5)
+	ax2.plot(range(episodes), mu2, color='black')
+	ax2.fill_between(range(episodes), mu2 + sigma2, mu2 - sigma2, facecolor='grey', alpha=0.5)
 	ax2.set_xlabel('number of episodes')
 	ax2.set_ylabel('Average cumulative rewards')
 

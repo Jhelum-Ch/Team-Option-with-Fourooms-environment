@@ -111,10 +111,7 @@ class EgreedyOptionPolicy:
 class SoftmaxActionPolicy:
 	def __init__(self, n_states, n_choices, temp=params['policy']['temperature']):
 		'''
-<<<<<<< HEAD
-=======
 
->>>>>>> 987cde61614aea6df206a5a4447651ffc0113243
 		:param n_states: number of encoded individual states
 		:param n_choices: choices over which pmf spreads choice can be either number of primitive actions or options
 		:param temp: lower temperature means uniform distribution, higher means delta
