@@ -1,5 +1,5 @@
 # teamOptionFourooms
-Code for team option paper
+Python code for distributed options in tabular environments. 
 
 ## Environment code description (fourroomsEnv.py)
 
